@@ -14,6 +14,23 @@ import (
 
 var erroredUpstream = errors.New("errored upstream")
 
+var (
+	IsuconClient http.Client
+)
+
+func init() {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConns = 100
+	transport.IdleConnTimeout = 90 * time.Second
+	transport.TLSHandshakeTimeout = 10 * time.Second
+	transport.ExpectContinueTimeout = 1 * time.Second
+
+	IsuconClient = http.Client{
+		Timeout:   5 * time.Second,
+		Transport: transport,
+	}
+}
+
 type paymentGatewayPostPaymentRequest struct {
 	Amount int `json:"amount"`
 }
@@ -56,7 +73,7 @@ func tryPostAndValidate(ctx context.Context, paymentGatewayURL, token string, bo
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := IsuconClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("POST /payments request failed: %w", err)
 	}
@@ -74,7 +91,7 @@ func tryPostAndValidate(ctx context.Context, paymentGatewayURL, token string, bo
 	}
 	getReq.Header.Set("Authorization", "Bearer "+token)
 
-	getRes, err := http.DefaultClient.Do(getReq)
+	getRes, err := IsuconClient.Do(getReq)
 	if err != nil {
 		return fmt.Errorf("GET /payments request failed: %w", err)
 	}
