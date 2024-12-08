@@ -129,7 +129,12 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	new_created_at := time.Now()
 	if _, err := tx.ExecContext(
 		ctx,
-		`UPDATE chair_locations SET latitude = ?, longitude = ?, created_at = ? WHERE chair_id = ?`,
+		`INSERT INTO chair_locations (chair_id, latitude, longitude, created_at)
+			VALUES (?, ?, ?, ?)
+			ON DUPLICATE KEY UPDATE
+    		latitude = VALUES(latitude),
+    		longitude = VALUES(longitude),
+    		created_at = VALUES(created_at)`,
 		req.Latitude, req.Longitude, new_created_at, chair.ID,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
