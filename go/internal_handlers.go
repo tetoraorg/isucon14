@@ -15,7 +15,6 @@ func internalGetMatching(ctx context.Context) {
 		return
 	}
 	if len(chairs) == 0 {
-		slog.Info("No active chairs")
 		return
 	}
 
@@ -30,7 +29,6 @@ func internalGetMatching(ctx context.Context) {
 		return
 	}
 	if len(nullRides) == 0 {
-		slog.Info("No null rides")
 		return
 	}
 
