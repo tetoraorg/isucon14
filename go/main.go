@@ -216,7 +216,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	// userByIDCache.Purge()
 	// userByTokenCache.Purge()
 	// userByInviteCache.Purge()
-	// chairAccessTokenCache.Purge()
+	chairAccessTokenCache.Purge()
 
 	// ownerByIDCache.Purge()
 	// ownerByTokenCache.Purge()
