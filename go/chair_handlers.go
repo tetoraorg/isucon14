@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 )
@@ -111,37 +112,55 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	chairLocationID := ulid.Make().String()
+	// 最後の椅子の位置を取得
+	var lastLocation ChairLocation
+	last_err := tx.GetContext(ctx, &lastLocation, `
+		SELECT *
+		FROM chair_locations
+		WHERE chair_id = ?
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, chair.ID)
+	if last_err != nil && !errors.Is(last_err, sql.ErrNoRows) {
+		writeError(w, http.StatusInternalServerError, last_err)
+		return
+	}
+
+	var locationID string
+	if errors.Is(last_err, sql.ErrNoRows) {
+		locationID = ulid.Make().String()
+	} else {
+		locationID = lastLocation.ID
+	}
+
+	new_created_at := time.Now()
 	if _, err := tx.ExecContext(
 		ctx,
-		`INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)`,
-		chairLocationID, chair.ID, req.Latitude, req.Longitude,
+		`INSERT INTO chair_locations (id, chair_id, latitude, longitude, created_at)
+			VALUES (?, ?, ?, ?, ?)
+			ON DUPLICATE KEY UPDATE
+				chair_id = VALUES(chair_id),
+    		latitude = VALUES(latitude),
+    		longitude = VALUES(longitude),
+    		created_at = VALUES(created_at)`,
+		locationID, chair.ID, req.Latitude, req.Longitude, new_created_at,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	location := &ChairLocation{}
-	if err := tx.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?`, chairLocationID); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
+	location := &ChairLocation{
+		ID:        lastLocation.ID,
+		ChairID:   chair.ID,
+		Latitude:  req.Latitude,
+		Longitude: req.Longitude,
+		CreatedAt: new_created_at,
 	}
 
 	// 距離の更新をするように
-	var lastLocation ChairLocation
-	err = tx.GetContext(ctx, &lastLocation, `
-		SELECT * 
-		FROM chair_locations 
-		WHERE chair_id = ? 
-		ORDER BY created_at DESC 
-		LIMIT 1 OFFSET 1
-	`, chair.ID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
 	var distance int
-	if err == nil {
+	if last_err == nil && err == nil {
+		// 両方取得できたときのみ
 		distance = abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude)
 		if _, err := tx.ExecContext(ctx, `
 		UPDATE chairs
