@@ -129,7 +129,7 @@ func setup() http.Handler {
 	if os.Getenv("PROD") != "true" {
 		// ポートを分離したいときなど
 		pproteinHandler := integration.NewDebugHandler()
-		go http.ListenAndServe(":8080", pproteinHandler)
+		go http.ListenAndServe(":9000", pproteinHandler)
 	}
 
 	return mux
