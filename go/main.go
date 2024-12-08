@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -82,6 +83,8 @@ var latestRideStatusCache, _ = sc.New(func(ctx context.Context, rideID string) (
 
 	return status, nil
 }, 90*time.Second, 90*time.Second)
+
+var chairLocationsCache = sync.Map{}
 
 func main() {
 	mux := setup()
