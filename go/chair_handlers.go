@@ -255,7 +255,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	chair := ctx.Value("chair").(*Chair)
 
 	initialRide := &Ride{}
-	if err := db.GetContext(ctx, initialRide, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
+	if err := database().GetContext(ctx, initialRide, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
 				RetryAfterMs: 30,
@@ -279,7 +279,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			return
 		case rrs := <-updateRideStatusCh[chair.ID]:
-			tx, err := db.Beginx()
+			tx, err := database().Beginx()
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
