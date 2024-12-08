@@ -39,7 +39,6 @@ sudo systemctl restart $UNIT_NAME
 sudo systemctl restart nginx
 sudo systemctl restart mysql
 sudo sysctl -p
-
 # Slow Query Log
 if $PROD; then
   sudo mysql -e 'SET GLOBAL slow_query_log = OFF;'

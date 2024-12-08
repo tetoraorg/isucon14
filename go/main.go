@@ -24,6 +24,23 @@ var db *sqlx.DB
 
 func main() {
 	mux := setup()
+
+	go func() {
+		interval := 500 // milli seconds
+		if vStr, exists := os.LookupEnv("ISUCON_MATCHING_INTERVAL"); exists {
+			if val, err := strconv.Atoi(vStr); err == nil {
+				interval = val
+			}
+		}
+
+		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			internalGetMatching(context.Background())
+		}
+	}()
+
 	slog.Info("Listening on :8080")
 	http.ListenAndServe(":8080", mux)
 }
@@ -122,21 +139,6 @@ func setup() http.Handler {
 	// {
 	// 	mux.HandleFunc("GET /api/internal/matching", internalGetMatching)
 	// }
-	go func() {
-
-		interval := 500// milli seconds
-		if vStr, exists := os.LookupEnv("ISUCON_MATCHING_INTERVAL"); exists {
-			if val, err := strconv.Atoi(vStr); err == nil {
-				interval = val
-			}
-		}
-
-		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
-		defer ticker.Stop()
-		for range ticker.C {
-			internalGetMatching(context.Background())
-		}
-	}()
 
 	// pproteinのエンドポイント設定
 	if os.Getenv("PROD") != "true" {
