@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -15,12 +14,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
 	"github.com/kaz/pprotein/integration"
 )
-
-var db *sqlx.DB
 
 func main() {
 	mux := setup()
@@ -45,55 +40,13 @@ func main() {
 }
 
 func setup() http.Handler {
-	host := os.Getenv("ISUCON_DB_HOST")
-	if host == "" {
-		host = "127.0.0.1"
-	}
-	port := os.Getenv("ISUCON_DB_PORT")
-	if port == "" {
-		port = "3306"
-	}
-	_, err := strconv.Atoi(port)
-	if err != nil {
-		panic(fmt.Sprintf("failed to convert DB port number from ISUCON_DB_PORT environment variable into int: %v", err))
-	}
-	user := os.Getenv("ISUCON_DB_USER")
-	if user == "" {
-		user = "isucon"
-	}
-	password := os.Getenv("ISUCON_DB_PASSWORD")
-	if password == "" {
-		password = "isucon"
-	}
-	dbname := os.Getenv("ISUCON_DB_NAME")
-	if dbname == "" {
-		dbname = "isuride"
-	}
 
+	initDatabase()
 
-
-	dbConfig := mysql.NewConfig()
-	dbConfig.User = user
-	dbConfig.Passwd = password
-	dbConfig.Addr = net.JoinHostPort(host, port)
-	dbConfig.Net = "tcp"
-	dbConfig.DBName = dbname
-	dbConfig.ParseTime = true
-
-	_db, err := sqlx.Connect("mysql", dbConfig.FormatDSN())
-	if err != nil {
-		panic(err)
-	}
-	db = _db
-
-	maxConnsInt := 25
-	db.SetMaxOpenConns(maxConnsInt)
-	db.SetMaxIdleConns(maxConnsInt * 2)
-	db.SetConnMaxLifetime(3 * time.Minute)
 
 	// 再起動試験対策
 	for {
-		err := db.Ping()
+		err := database().Ping()
 		if err == nil {
 			break
 		}
@@ -177,7 +130,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
+	if _, err := database().ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
