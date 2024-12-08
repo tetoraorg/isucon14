@@ -5,6 +5,8 @@ After=mysql.service
 Requires=mysql.service
 
 [Service]
+LimitNOFILE=1006500
+LimitNPROC=1006500
 WorkingDirectory=/home/isucon/repo/go
 EnvironmentFile=/home/isucon/repo/s3/env.sh
 
