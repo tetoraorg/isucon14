@@ -84,18 +84,18 @@ func appPostUsers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// ユーザーチェック
-		var inviter User
-		err = tx.GetContext(ctx, &inviter, "SELECT * FROM users WHERE invitation_code = ?", *req.InvitationCode)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				writeError(w, http.StatusBadRequest, errors.New("この招待コードは使用できません。"))
-				return
-			}
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+		// var inviter User
+		// err = tx.GetContext(ctx, &inviter, "SELECT * FROM users WHERE invitation_code = ?", *req.InvitationCode)
+		// if err != nil {
+		// 	if errors.Is(err, sql.ErrNoRows) {
+		// 		writeError(w, http.StatusBadRequest, errors.New("この招待コードは使用できません。"))
+		// 		return
+		// 	}
+		// 	writeError(w, http.StatusInternalServerError, err)
+		// 	return
+		// }
 
-		// inviter, err := userByInviteCache.Get(ctx, *req.InvitationCode)
+		inviter, err := userByInviteCache.Get(ctx, *req.InvitationCode)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusBadRequest, errors.New("この招待コードは使用できません。"))
@@ -265,17 +265,17 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		item.Chair.Name = chair.Name
 		item.Chair.Model = chair.Model
 
-		owner := &Owner{}
-		if err := tx.GetContext(ctx, owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		// owner, err := ownerByIDCache.Get(ctx, chair.OwnerID)
-		// if err != nil {
+		// owner := &Owner{}
+		// if err := tx.GetContext(ctx, owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
 		// 	writeError(w, http.StatusInternalServerError, err)
 		// 	return
 		// }
+
+		owner, err := ownerByIDCache.Get(ctx, chair.OwnerID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
 
 		item.Chair.Owner = owner.Name
 

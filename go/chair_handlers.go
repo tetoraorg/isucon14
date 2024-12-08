@@ -33,18 +33,8 @@ func chairPostChairs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	owner := &Owner{}
-	if err := database().GetContext(ctx, owner, "SELECT * FROM owners WHERE chair_register_token = ?", req.ChairRegisterToken); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusUnauthorized, errors.New("invalid chair_register_token"))
-			return
-		}
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	// owner, err := ownerByRegisterCache.Get(ctx, req.ChairRegisterToken)
-	// if err != nil {
+	// owner := &Owner{}
+	// if err := database().GetContext(ctx, owner, "SELECT * FROM owners WHERE chair_register_token = ?", req.ChairRegisterToken); err != nil {
 	// 	if errors.Is(err, sql.ErrNoRows) {
 	// 		writeError(w, http.StatusUnauthorized, errors.New("invalid chair_register_token"))
 	// 		return
@@ -53,10 +43,20 @@ func chairPostChairs(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
+	owner, err := ownerByRegisterCache.Get(ctx, req.ChairRegisterToken)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusUnauthorized, errors.New("invalid chair_register_token"))
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	chairID := ulid.Make().String()
 	accessToken := secureRandomStr(32)
 
-	_, err := ridesDatabase().ExecContext(
+	_, err = ridesDatabase().ExecContext(
 		ctx,
 		"INSERT INTO chairs (id, owner_id, name, model, is_active, access_token) VALUES (?, ?, ?, ?, ?, ?)",
 		chairID, owner.ID, req.Name, req.Model, false, accessToken,
@@ -301,17 +301,17 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		status = yetSentRideStatus.Status
 	}
 
-	user := &User{}
-	err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", ride.UserID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	// user, err := userByIDCache.Get(ctx, ride.UserID)
+	// user := &User{}
+	// err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", ride.UserID)
 	// if err != nil {
 	// 	writeError(w, http.StatusInternalServerError, err)
 	// 	return
 	// }
+	user, err := userByIDCache.Get(ctx, ride.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	if yetSentRideStatus.ID != "" {
 		// latestRideStatusCache.Forget(ride.ID)
