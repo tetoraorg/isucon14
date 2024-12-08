@@ -75,14 +75,14 @@ var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*Pay
 	return &paymentToken, err
 }, 90*time.Second, 90*time.Second)
 
-var latestRideStatusCache, _ = sc.New(func(ctx context.Context, rideID string) (string, error) {
-	status := ""
-	if err := ridesDatabase().GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
-		return "", err
-	}
+// var latestRideStatusCache, _ = sc.New(func(ctx context.Context, rideID string) (string, error) {
+// 	status := ""
+// 	if err := ridesDatabase().GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
+// 		return "", err
+// 	}
 
-	return status, nil
-}, 90*time.Second, 90*time.Second)
+// 	return status, nil
+// }, 90*time.Second, 90*time.Second)
 
 var chairLocationsCache = sync.Map{}
 

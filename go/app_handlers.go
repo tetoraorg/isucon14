@@ -313,11 +313,15 @@ type executableGet interface {
 }
 
 func getLatestRideStatus(ctx context.Context, _tx executableGet, rideID string) (string, error) {
-	status, err := latestRideStatusCache.Get(ctx, rideID)
-	if err != nil {
+	// status, err := latestRideStatusCache.Get(ctx, rideID)
+	// if err != nil {
+	// 	return "", err
+	// }
+
+	status := ""
+	if err := ridesDatabase().GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
 		return "", err
 	}
-
 	return status, nil
 }
 
@@ -820,7 +824,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if yetSentRideStatus.ID != "" {
-		latestRideStatusCache.Forget(ride.ID)
+		// latestRideStatusCache.Forget(ride.ID)
 		_, err := ridesTx.ExecContext(ctx, `UPDATE ride_statuses SET app_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?`, yetSentRideStatus.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
