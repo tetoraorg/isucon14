@@ -270,8 +270,13 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		status = yetSentRideStatus.Status
 	}
 
-	user := &User{}
-	err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", ride.UserID)
+	// user := &User{}
+	// err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", ride.UserID)
+	// if err != nil {
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+	user, err := userCache.Get(ctx, ride.UserID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
