@@ -45,10 +45,10 @@
             regexp: "^PubkeyAuthentication "
             line: "PubkeyAuthentication yes"
             state: present
-        - name: Restart SSH service
-          service:
-            name: sshd
-            state: restarted
+        # - name: Restart SSH service
+        #   service:
+        #     name: sshd
+        #     state: restarted
 
     - name: Set up GitHub CLI
       become: yes

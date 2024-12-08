@@ -1,0 +1,18 @@
+Host s1
+    HostName 18.177.165.239
+    User isucon
+Host s2
+    HostName 57.180.110.59
+    User isucon
+Host s3
+    HostName 54.249.86.106
+    User isucon
+Host s1
+    HostName 18.177.165.239
+    User isucon
+Host s2
+    HostName 57.180.110.59
+    User isucon
+Host s3
+    HostName 54.249.86.106
+    User isucon
