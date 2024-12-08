@@ -43,7 +43,6 @@ func setup() http.Handler {
 
 	initDatabase()
 
-
 	// 再起動試験対策
 	for {
 		err := database().Ping()
@@ -53,7 +52,7 @@ func setup() http.Handler {
 		slog.Error("DB not ready", err)
 		time.Sleep(time.Second * 2)
 	}
-	slog.Error("DB ready")
+	slog.Info("DB ready")
 
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)

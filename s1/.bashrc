@@ -124,7 +124,7 @@ export REPOSITORY_DIR=/home/isucon/repo
 export APP_NAME=isuride
 export UNIT_NAME=isuride-go.service
 gh completion -s bash | bash
-alias d="cd $REPOSITORY_DIR && git pull && ./$SERVER_NAME/deploy.sh"
+alias d="cd $REPOSITORY_DIR && git pull && ./deploy.sh"
 alias h="htop"
 alias j="sudo journalctl -u $UNIT_NAME"
 s() { sudo systemctl $1 $UNIT_NAME }
