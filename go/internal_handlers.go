@@ -31,7 +31,7 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	var nullRides []*Ride
-	if err := tx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL"); err != nil {
+	if err := tx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at ASC"); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
