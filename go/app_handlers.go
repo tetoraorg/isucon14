@@ -763,33 +763,49 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNotificationResponseChairStats, error) {
 	stats := appGetNotificationResponseChairStats{}
 
-	rides := []Ride{}
+	type RideWithStatuses struct {
+		RideID     string    `db:"ride_id"`
+		ChairID    string    `db:"chair_id"`
+		Evaluation *int      `db:"evaluation"`
+		Status     string    `db:"status"`
+		CreatedAt  time.Time `db:"created_at"`
+	}
+	rideWithStatuses := []RideWithStatuses{}
 	err := tx.SelectContext(
 		ctx,
-		&rides,
-		`SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC`,
+		&rideWithStatuses,
+		`SELECT 
+			r.id AS ride_id, 
+			r.chair_id, 
+			r.evaluation, 
+			rs.status, 
+			rs.created_at
+		FROM rides r
+		INNER JOIN ride_statuses rs ON r.id = rs.ride_id
+		WHERE r.chair_id = ?
+		ORDER BY r.updated_at DESC, rs.created_at
+		`,
 		chairID,
 	)
 	if err != nil {
 		return stats, err
 	}
 
+	// 統計用
 	totalRideCount := 0
 	totalEvaluation := 0.0
-	for _, ride := range rides {
-		rideStatuses := []RideStatus{}
-		err = tx.SelectContext(
-			ctx,
-			&rideStatuses,
-			`SELECT * FROM ride_statuses WHERE ride_id = ? ORDER BY created_at`,
-			ride.ID,
-		)
-		if err != nil {
-			return stats, err
-		}
 
+	// ライドごとに処理
+	rideMap := make(map[string][]RideWithStatuses)
+	for _, row := range rideWithStatuses {
+		rideMap[row.RideID] = append(rideMap[row.RideID], row)
+	}
+
+	for _, rideStatuses := range rideMap {
 		var arrivedAt, pickupedAt *time.Time
 		var isCompleted bool
+		var evaluation *int
+
 		for _, status := range rideStatuses {
 			if status.Status == "ARRIVED" {
 				arrivedAt = &status.CreatedAt
@@ -799,16 +815,16 @@ func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNoti
 			if status.Status == "COMPLETED" {
 				isCompleted = true
 			}
+			evaluation = status.Evaluation
 		}
-		if arrivedAt == nil || pickupedAt == nil {
-			continue
-		}
-		if !isCompleted {
+
+		// 条件を満たさない場合はスキップ
+		if arrivedAt == nil || pickupedAt == nil || !isCompleted || evaluation == nil {
 			continue
 		}
 
 		totalRideCount++
-		totalEvaluation += float64(*ride.Evaluation)
+		totalEvaluation += float64(*evaluation)
 	}
 
 	stats.TotalRidesCount = totalRideCount
