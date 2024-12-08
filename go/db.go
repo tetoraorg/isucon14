@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -52,6 +53,10 @@ func initDatabase() (err error) {
 		if err != nil {
 			panic(err)
 		}
+		maxConnsInt := 25
+		dbs[i].SetMaxOpenConns(maxConnsInt)
+		dbs[i].SetMaxIdleConns(maxConnsInt * 2)
+		dbs[i].SetConnMaxLifetime(3 * time.Minute)
 	}
 	return nil
 }

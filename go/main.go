@@ -41,10 +41,8 @@ func main() {
 
 func setup() http.Handler {
 
-	maxConnsInt := 25
-	database().SetMaxOpenConns(maxConnsInt)
-	database().SetMaxIdleConns(maxConnsInt * 2)
-	database().SetConnMaxLifetime(3 * time.Minute)
+	initDatabase()
+
 
 	// 再起動試験対策
 	for {
