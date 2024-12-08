@@ -597,6 +597,10 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if ride.ChairID.Valid {
+		latestRideByChairIDCache.Forget(ride.ChairID.String)
+	}
+
 	// paymentToken := &PaymentToken{}
 	// if err := tx.GetContext(ctx, paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
 	// 	if errors.Is(err, sql.ErrNoRows) {

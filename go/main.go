@@ -82,6 +82,15 @@ var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*Pay
 // 	return &chairLocation, err
 // }, 90*time.Second, 90*time.Second)
 
+var latestRideByChairIDCache, _ = sc.New(func(ctx context.Context, chairID string) (*Ride, error) {
+	ride := &Ride{}
+	if err := database().GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chairID); err != nil {
+		return nil, err
+	}
+
+	return ride, nil
+}, 90*time.Second, 90*time.Second)
+
 var chairLocationsCache = sync.Map{}
 
 func main() {
@@ -212,6 +221,9 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	ownerByIDCache.Purge()
 	ownerByTokenCache.Purge()
 	ownerByRegisterCache.Purge()
+
+	latestRideByChairIDCache.Purge()
+	latestRideStatusCache.Purge()
 
 	// pproteinにcollect requestを飛ばす
 	if os.Getenv("PROD") != "true" {
