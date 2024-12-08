@@ -10,12 +10,14 @@ import (
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func internalGetMatching(ctx context.Context) {
 	// MEMO: 一旦最も待たせているリクエストに適当な空いている椅子マッチさせる実装とする。おそらくもっといい方法があるはず…
+	slog.Info("internalGetMatching")
 	ride := &Ride{}
 	if err := db.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			slog.Info("no rides")
 			return
 		}
-		slog.Error("error response wrote", err)
+		slog.Error("Failed to fetch ride", err)
 		return
 	}
 
