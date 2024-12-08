@@ -70,10 +70,7 @@ func setup() http.Handler {
 		dbname = "isuride"
 	}
 
-	maxConnsInt := 25
-	db.SetMaxOpenConns(maxConnsInt)
-	db.SetMaxIdleConns(maxConnsInt * 2)
-	db.SetConnMaxLifetime(3 * time.Minute)
+
 
 	dbConfig := mysql.NewConfig()
 	dbConfig.User = user
@@ -88,6 +85,11 @@ func setup() http.Handler {
 		panic(err)
 	}
 	db = _db
+
+	maxConnsInt := 25
+	db.SetMaxOpenConns(maxConnsInt)
+	db.SetMaxIdleConns(maxConnsInt * 2)
+	db.SetConnMaxLifetime(3 * time.Minute)
 
 	// 再起動試験対策
 	for {
