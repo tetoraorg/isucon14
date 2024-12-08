@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -77,18 +78,17 @@ func main() {
 	mux := setup()
 
 	go func() {
-		// interval := 500 // milli seconds
-		// if vStr, exists := os.LookupEnv("ISUCON_MATCHING_INTERVAL"); exists {
-		// 	if val, err := strconv.Atoi(vStr); err == nil {
-		// 		interval = val
-		// 	}
-		// }
-		// ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
-		// defer ticker.Stop()
+		interval := 500 // milli seconds
+		if vStr, exists := os.LookupEnv("ISUCON_MATCHING_INTERVAL"); exists {
+			if val, err := strconv.Atoi(vStr); err == nil {
+				interval = val
+			}
+		}
+		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
+		defer ticker.Stop()
 
-		for {
+		for range ticker.C {
 			internalGetMatching(context.Background())
-			<-updateRideCh
 		}
 	}()
 
