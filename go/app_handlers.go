@@ -969,14 +969,30 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		// 	chair.ID,
 		// )
 
-		chairLocation, err := chairLocationsCache.Get(ctx, chair.ID)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
+		// chairLocation, err := chairLocationsCache.Get(ctx, chair.ID)
+		// if err != nil {
+		// 	if errors.Is(err, sql.ErrNoRows) {
+		// 		continue
+		// 	}
+		// 	writeError(w, http.StatusInternalServerError, err)
+		// 	return
+		// }
+
+		_chairLocation, ok := chairLocationsCache.Load(chair.ID)
+		if !ok {
+			var chairLocation ChairLocation
+			query := `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`
+			err := database().GetContext(ctx, &chairLocation, query, chair.ID)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					continue
+				}
+				writeError(w, http.StatusInternalServerError, err)
+				return
 			}
-			writeError(w, http.StatusInternalServerError, err)
-			return
 		}
+
+		chairLocation := _chairLocation.(ChairLocation)
 
 		if calculateDistance(coordinate.Latitude, coordinate.Longitude, chairLocation.Latitude, chairLocation.Longitude) <= distance {
 			nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{

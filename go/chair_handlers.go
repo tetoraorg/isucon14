@@ -158,9 +158,6 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-
-	chairLocationsCache.Forget(chair.ID)
-
 	location := &ChairLocation{
 		ID:        lastLocation.ID,
 		ChairID:   chair.ID,
@@ -168,6 +165,8 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		Longitude: req.Longitude,
 		CreatedAt: new_created_at,
 	}
+
+	chairLocationsCache.Store(chair.ID, location)
 
 	// 距離の更新をするように
 	var distance int
