@@ -182,12 +182,12 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
-				ch, ok := updateChairCh[ride.ID]
+				ch, ok := updateRideStatusCh[ride.ID]
 				if !ok {
-					ch = make(chan *RideStatus, 1)
-					updateChairCh[ride.ID] = ch
+					ch = make(chan *RideRideStatus, 1)
+					updateRideStatusCh[ride.ID] = ch
 				}
-				ch <- &rideStatus
+				ch <- &RideRideStatus{r: ride, s: &rideStatus}
 			}
 
 			if req.Latitude == ride.DestinationLatitude && req.Longitude == ride.DestinationLongitude && status == "CARRYING" {
@@ -204,12 +204,12 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
-				ch, ok := updateChairCh[ride.ID]
+				ch, ok := updateRideStatusCh[ride.ID]
 				if !ok {
-					ch = make(chan *RideStatus, 1)
-					updateChairCh[ride.ID] = ch
+					ch = make(chan *RideRideStatus, 1)
+					updateRideStatusCh[ride.ID] = ch
 				}
-				ch <- &rideStatus
+				ch <- &RideRideStatus{r: ride, s: &rideStatus}
 			}
 		}
 	}
@@ -242,7 +242,12 @@ type chairGetNotificationResponseData struct {
 	Status                string     `json:"status"`
 }
 
-var updateChairCh = make(map[string]chan *RideStatus)
+type RideRideStatus struct {
+	r *Ride
+	s *RideStatus
+}
+
+var updateRideStatusCh = make(map[string]chan *RideRideStatus) // rideID -> chan *RideRideStatus
 
 func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -255,8 +260,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 	ride := &Ride{}
-	yetSentRideStatus := RideStatus{}
-	status := ""
+	user := &User{}
 
 	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -269,13 +273,8 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := &User{}
-	err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", ride.UserID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
+	yetSentRideStatus := RideStatus{}
+	status := ""
 	if err := tx.GetContext(ctx, &yetSentRideStatus, `SELECT * FROM ride_statuses WHERE ride_id = ? AND chair_sent_at IS NULL ORDER BY created_at ASC LIMIT 1`, ride.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			status, err = getLatestRideStatus(ctx, tx, ride.ID)
@@ -311,8 +310,18 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	})
 
 	for {
-		rideStatus := <-updateChairCh[ride.ID]
-		chairSendNotification(w, r, tx, user, ride, rideStatus)
+		select {
+		case <-r.Context().Done():
+			_ = tx.Commit()
+			return
+		case rrs := <-updateRideStatusCh[ride.ID]:
+			err := tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ?", ride.UserID)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+				return
+			}
+			chairSendNotification(w, r, tx, user, rrs.r, rrs.s)
+		}
 	}
 }
 
@@ -403,12 +412,12 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		ch, ok := updateChairCh[ride.ID]
+		ch, ok := updateRideStatusCh[ride.ID]
 		if !ok {
-			ch = make(chan *RideStatus, 1)
-			updateChairCh[ride.ID] = ch
+			ch = make(chan *RideRideStatus, 1)
+			updateRideStatusCh[ride.ID] = ch
 		}
-		ch <- &rideStatus
+		ch <- &RideRideStatus{r: ride, s: &rideStatus}
 	// After Picking up user
 	case "CARRYING":
 		status, err := getLatestRideStatus(ctx, tx, ride.ID)
@@ -433,12 +442,12 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		ch, ok := updateChairCh[ride.ID]
+		ch, ok := updateRideStatusCh[ride.ID]
 		if !ok {
-			ch = make(chan *RideStatus, 1)
-			updateChairCh[ride.ID] = ch
+			ch = make(chan *RideRideStatus, 1)
+			updateRideStatusCh[ride.ID] = ch
 		}
-		ch <- &rideStatus
+		ch <- &RideRideStatus{r: ride, s: &rideStatus}
 	default:
 		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
 	}
