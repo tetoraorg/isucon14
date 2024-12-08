@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/kaz/pprotein/integration"
 )
 
 var db *sqlx.DB
@@ -109,6 +110,13 @@ func setup() http.Handler {
 		mux.HandleFunc("GET /api/internal/matching", internalGetMatching)
 	}
 
+	// pproteinのエンドポイント設定
+	if os.Getenv("PROD") != "true" {
+		// ポートを分離したいときなど
+		pproteinHandler := integration.NewDebugHandler()
+		go http.ListenAndServe(":8080", pproteinHandler)
+	}
+
 	return mux
 }
 
@@ -136,6 +144,15 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	if _, err := db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
+	}
+
+	// pproteinにcollect requestを飛ばす
+	if os.Getenv("PROD") != "true" {
+		go func() {
+			if _, err := http.Get("https://pprotein-cqdme5gvfcg7gwew.australiaeast-01.azurewebsites.net/api/group/collect"); err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+			}
+		}()
 	}
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
