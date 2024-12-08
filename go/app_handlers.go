@@ -992,7 +992,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		chairLocation := _chairLocation.(ChairLocation)
+		chairLocation := _chairLocation.(*ChairLocation)
 
 		if calculateDistance(coordinate.Latitude, coordinate.Longitude, chairLocation.Latitude, chairLocation.Longitude) <= distance {
 			nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
@@ -1008,10 +1008,6 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	retrievedAt := time.Now()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
 
 	writeJSON(w, http.StatusOK, &appGetNearbyChairsResponse{
 		Chairs:      nearbyChairs,
