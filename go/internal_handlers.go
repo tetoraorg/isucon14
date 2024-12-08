@@ -7,8 +7,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var updateRideCh = make(chan struct{}, 1)
-
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func internalGetMatching(ctx context.Context) {
 	tx, err := database().BeginTxx(ctx, nil)
