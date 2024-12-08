@@ -18,10 +18,24 @@ import (
 	"github.com/motoki317/sc"
 )
 
-var userCache, _ = sc.New(func(ctx context.Context, id string) (*User, error) {
+var userByIDCache, _ = sc.New(func(ctx context.Context, id string) (*User, error) {
 	var user User
 	query := "SELECT * FROM users WHERE id = ?"
 	err := database().GetContext(ctx, &user, query, id)
+	return &user, err
+}, 90*time.Second, 90*time.Second)
+
+var userByTokenCache, _ = sc.New(func(ctx context.Context, token string) (*User, error) {
+	var user User
+	query := "SELECT * FROM users WHERE access_token = ?"
+	err := database().GetContext(ctx, &user, query, token)
+	return &user, err
+}, 90*time.Second, 90*time.Second)
+
+var userByInviteCache, _ = sc.New(func(ctx context.Context, invite string) (*User, error) {
+	var user User
+	query := "SELECT * FROM users WHERE invitation_code = ?"
+	err := database().GetContext(ctx, &user, query, invite)
 	return &user, err
 }, 90*time.Second, 90*time.Second)
 
@@ -142,7 +156,9 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userCache.Purge()
+	userByIDCache.Purge()
+	userByTokenCache.Purge()
+	userByInviteCache.Purge()
 
 	// pproteinにcollect requestを飛ばす
 	if os.Getenv("PROD") != "true" {

@@ -276,7 +276,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	// 	writeError(w, http.StatusInternalServerError, err)
 	// 	return
 	// }
-	user, err := userCache.Get(ctx, ride.UserID)
+	user, err := userByIDCache.Get(ctx, ride.UserID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
