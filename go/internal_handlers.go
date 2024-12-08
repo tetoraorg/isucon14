@@ -104,9 +104,9 @@ func internalGetMatching(ctx context.Context) {
 
 		for _, chair := range chairs {
 			dis := calculateDistance(chair.Latitude, chair.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude)
-			if dis > 1000 {
-				break
-			}
+			// if dis > 1000 {
+			// 	break
+			// }
 
 			ridesInChair := make([]*Ride, 0, 100)
 			for _, ride := range rides {
