@@ -31,7 +31,7 @@ sudo rm -rf /var/log/nginx/access.log &&
 sudo systemctl daemon-reload
 sudo systemctl stop $UNIT_NAME
 sudo systemctl disable $UNIT_NAME
-sudo systemctl stop nignx
+sudo systemctl stop nginx
 sudo systemctl disable nginx
 sudo systemctl restart mysql
 sudo systemctl stop isuride-matcher.service
