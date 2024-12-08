@@ -76,7 +76,7 @@ var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*Pay
 
 var chairLocationsCache, _ = sc.New(func(ctx context.Context, chairID string) (*ChairLocation, error) {
 	var chairLocation ChairLocation
-	query := `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`,
+	query := `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`
 	err := database().GetContext(ctx, &chairLocation, query, chairID)
 	return chairLocation, err
 }, 90*time.Second, 90*time.Second)
