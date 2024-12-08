@@ -258,11 +258,18 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		item.Chair.Name = chair.Name
 		item.Chair.Model = chair.Model
 
-		owner := &Owner{}
-		if err := tx.GetContext(ctx, owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
+		// owner := &Owner{}
+		// if err := tx.GetContext(ctx, owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
+		// 	writeError(w, http.StatusInternalServerError, err)
+		// 	return
+		// }
+
+		owner, err := ownerByIDCache.Get(ctx, chair.OwnerID)
+		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+
 		item.Chair.Owner = owner.Name
 
 		items = append(items, item)
@@ -590,8 +597,18 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	paymentToken := &PaymentToken{}
-	if err := tx.GetContext(ctx, paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
+	// paymentToken := &PaymentToken{}
+	// if err := tx.GetContext(ctx, paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
+	// 	if errors.Is(err, sql.ErrNoRows) {
+	// 		writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
+	// 		return
+	// 	}
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+
+	paymentToken, err := paymentTokenCache.Get(ctx, ride.UserID)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
 			return
@@ -609,8 +626,14 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		Amount: fare,
 	}
 
-	var paymentGatewayURL string
-	if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
+	// var paymentGatewayURL string
+	// if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+
+	paymentGatewayURL, err := settingCache.Get(ctx, "payment_gateway_url")
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
