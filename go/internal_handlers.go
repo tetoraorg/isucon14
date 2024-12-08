@@ -127,7 +127,7 @@ func internalGetMatching(ctx context.Context) {
 				}
 
 				latestStatus := statuses[0]
-				if latestStatus.Status != "COMPLETE" {
+				if latestStatus.Status != "COMPLETED" {
 					allReady = false
 					break
 				}
