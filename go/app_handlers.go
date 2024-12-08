@@ -84,18 +84,18 @@ func appPostUsers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// ユーザーチェック
-		// var inviter User
-		// err = tx.GetContext(ctx, &inviter, "SELECT * FROM users WHERE invitation_code = ?", *req.InvitationCode)
-		// if err != nil {
-		// 	if errors.Is(err, sql.ErrNoRows) {
-		// 		writeError(w, http.StatusBadRequest, errors.New("この招待コードは使用できません。"))
-		// 		return
-		// 	}
-		// 	writeError(w, http.StatusInternalServerError, err)
-		// 	return
-		// }
+		var inviter User
+		err = tx.GetContext(ctx, &inviter, "SELECT * FROM users WHERE invitation_code = ?", *req.InvitationCode)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusBadRequest, errors.New("この招待コードは使用できません。"))
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
 
-		inviter, err := userByInviteCache.Get(ctx, *req.InvitationCode)
+		// inviter, err := userByInviteCache.Get(ctx, *req.InvitationCode)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusBadRequest, errors.New("この招待コードは使用できません。"))
@@ -265,17 +265,17 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		item.Chair.Name = chair.Name
 		item.Chair.Model = chair.Model
 
-		// owner := &Owner{}
-		// if err := tx.GetContext(ctx, owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
-		// 	writeError(w, http.StatusInternalServerError, err)
-		// 	return
-		// }
-
-		owner, err := ownerByIDCache.Get(ctx, chair.OwnerID)
-		if err != nil {
+		owner := &Owner{}
+		if err := tx.GetContext(ctx, owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+
+		// owner, err := ownerByIDCache.Get(ctx, chair.OwnerID)
+		// if err != nil {
+		// 	writeError(w, http.StatusInternalServerError, err)
+		// 	return
+		// }
 
 		item.Chair.Owner = owner.Name
 
@@ -631,18 +631,8 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// paymentToken := &PaymentToken{}
-	// if err := tx.GetContext(ctx, paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
-	// 	if errors.Is(err, sql.ErrNoRows) {
-	// 		writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
-	// 		return
-	// 	}
-	// 	writeError(w, http.StatusInternalServerError, err)
-	// 	return
-	// }
-
-	paymentToken, err := paymentTokenCache.Get(ctx, ride.UserID)
-	if err != nil {
+	paymentToken := &PaymentToken{}
+	if err := tx.GetContext(ctx, paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
 			return
@@ -650,6 +640,16 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	// paymentToken, err := paymentTokenCache.Get(ctx, ride.UserID)
+	// if err != nil {
+	// 	if errors.Is(err, sql.ErrNoRows) {
+	// 		writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
+	// 		return
+	// 	}
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
 
 	fare, err := calculateDiscountedFare(ctx, tx, ride.UserID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
 	if err != nil {
@@ -660,17 +660,17 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		Amount: fare,
 	}
 
-	// var paymentGatewayURL string
-	// if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
-	// 	writeError(w, http.StatusInternalServerError, err)
-	// 	return
-	// }
-
-	paymentGatewayURL, err := settingCache.Get(ctx, "payment_gateway_url")
-	if err != nil {
+	var paymentGatewayURL string
+	if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	// paymentGatewayURL, err := settingCache.Get(ctx, "payment_gateway_url")
+	// if err != nil {
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
 
 	if err := requestPaymentGatewayPostPayment(ctx, paymentGatewayURL, paymentToken.Token, paymentGatewayRequest, func() ([]Ride, error) {
 		rides := []Ride{}
