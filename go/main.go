@@ -175,7 +175,6 @@ func writeJSONForSSE(w http.ResponseWriter, statusCode int, v interface{}) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(statusCode)
 	w.Write([]byte("data: "))
 	w.Write(buf.Bytes())
 	w.Write([]byte("\n\n"))

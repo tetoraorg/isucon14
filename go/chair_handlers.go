@@ -316,6 +316,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 			_ = tx.Commit()
+			w.WriteHeader(http.StatusOK)
 			return
 		case rrs := <-updateRideStatusCh[chair.ID]:
 			slog.Info("chairGetNotification", "rrs", rrs)
