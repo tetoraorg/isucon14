@@ -37,7 +37,7 @@ func main() {
 
 		for range ticker.C {
 			slog.Info("internalGetMatching")
-			internalGetMatching(context.Background())
+			// internalGetMatching(context.Background())
 		}
 	}()
 
