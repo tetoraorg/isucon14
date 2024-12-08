@@ -113,8 +113,7 @@ func internalGetMatching(ctx context.Context) {
 					return
 				}
 
-				tx.Commit()
-				return
+				_ = tx.Commit()
 			}
 		}
 	}
