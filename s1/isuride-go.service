@@ -5,12 +5,12 @@ After=mysql.service
 Requires=mysql.service
 
 [Service]
-WorkingDirectory=/home/isucon/webapp/go
-EnvironmentFile=/home/isucon/env.sh
+WorkingDirectory=/home/isucon/repo/go
+EnvironmentFile=/home/isucon/repo/s1/env.sh
 
 User=isucon
 Group=isucon
-ExecStart=/home/isucon/webapp/go/isuride
+ExecStart=/home/isucon/repo/go/isuride
 ExecStop=/bin/kill -s QUIT $MAINPID
 
 Restart=on-failure
