@@ -39,6 +39,27 @@ var userByInviteCache, _ = sc.New(func(ctx context.Context, invite string) (*Use
 	return &user, err
 }, 90*time.Second, 90*time.Second)
 
+var ownerByIDCache, _ = sc.New(func(ctx context.Context, id string) (*Owner, error) {
+	var owner Owner
+	query := "SELECT * FROM owners WHERE id = ?"
+	err := database().GetContext(ctx, &owner, query, id)
+	return &owner, err
+}, 90*time.Second, 90*time.Second)
+
+var ownerByTokenCache, _ = sc.New(func(ctx context.Context, token string) (*Owner, error) {
+	var owner Owner
+	query := "SELECT * FROM owners WHERE access_token = ?"
+	err := database().GetContext(ctx, &owner, query, token)
+	return &owner, err
+}, 90*time.Second, 90*time.Second)
+
+var ownerByRegisterCache, _ = sc.New(func(ctx context.Context, register string) (*Owner, error) {
+	var owner Owner
+	query := "SELECT * FROM owners WHERE register_code = ?"
+	err := database().GetContext(ctx, &owner, query, register)
+	return &owner, err
+}, 90*time.Second, 90*time.Second)
+
 func main() {
 	mux := setup()
 
@@ -159,6 +180,10 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	userByIDCache.Purge()
 	userByTokenCache.Purge()
 	userByInviteCache.Purge()
+
+	ownerByIDCache.Purge()
+	ownerByTokenCache.Purge()
+	ownerByRegisterCache.Purge()
 
 	// pproteinにcollect requestを飛ばす
 	if os.Getenv("PROD") != "true" {
