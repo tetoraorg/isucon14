@@ -70,6 +70,11 @@ func setup() http.Handler {
 		dbname = "isuride"
 	}
 
+	maxConnsInt := 25
+	db.SetMaxOpenConns(maxConnsInt)
+	db.SetMaxIdleConns(maxConnsInt * 2)
+	db.SetConnMaxLifetime(3 * time.Minute)
+
 	dbConfig := mysql.NewConfig()
 	dbConfig.User = user
 	dbConfig.Passwd = password
