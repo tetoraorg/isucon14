@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kaz/pprotein/integration"
+	"github.com/motoki317/sc"
 )
 
 // var userByIDCache, _ = sc.New(func(ctx context.Context, id string) (*User, error) {
@@ -60,19 +61,19 @@ import (
 // 	return &owner, err
 // }, 90*time.Second, 90*time.Second)
 
-// var settingCache, _ = sc.New(func(ctx context.Context, name string) (string, error) {
-// 	var setting string
-// 	query := "SELECT value FROM settings WHERE name = ?"
-// 	err := database().GetContext(ctx, &setting, query, name)
-// 	return setting, err
-// }, 90*time.Second, 90*time.Second)
+var settingCache, _ = sc.New(func(ctx context.Context, name string) (string, error) {
+	var setting string
+	query := "SELECT value FROM settings WHERE name = ?"
+	err := database().GetContext(ctx, &setting, query, name)
+	return setting, err
+}, 90*time.Second, 90*time.Second)
 
-// var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*PaymentToken, error) {
-// 	var paymentToken PaymentToken
-// 	query := "SELECT * FROM payment_tokens WHERE user_id = ?"
-// 	err := database().GetContext(ctx, &paymentToken, query, userID)
-// 	return &paymentToken, err
-// }, 90*time.Second, 90*time.Second)
+var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*PaymentToken, error) {
+	var paymentToken PaymentToken
+	query := "SELECT * FROM payment_tokens WHERE user_id = ?"
+	err := database().GetContext(ctx, &paymentToken, query, userID)
+	return &paymentToken, err
+}, 90*time.Second, 90*time.Second)
 
 // var latestRideStatusCache, _ = sc.New(func(ctx context.Context, rideID string) (string, error) {
 // 	status := ""
@@ -210,8 +211,8 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// settingCache.Purge()
-	// paymentTokenCache.Purge()
+	settingCache.Purge()
+	paymentTokenCache.Purge()
 
 	// userByIDCache.Purge()
 	// userByTokenCache.Purge()

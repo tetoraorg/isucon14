@@ -631,18 +631,8 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	paymentToken := &PaymentToken{}
-	if err := tx.GetContext(ctx, paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
-			return
-		}
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	// paymentToken, err := paymentTokenCache.Get(ctx, ride.UserID)
-	// if err != nil {
+	// paymentToken := &PaymentToken{}
+	// if err := tx.GetContext(ctx, paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
 	// 	if errors.Is(err, sql.ErrNoRows) {
 	// 		writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
 	// 		return
@@ -650,6 +640,16 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 	// 	writeError(w, http.StatusInternalServerError, err)
 	// 	return
 	// }
+
+	paymentToken, err := paymentTokenCache.Get(ctx, ride.UserID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	fare, err := calculateDiscountedFare(ctx, tx, ride.UserID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
 	if err != nil {
@@ -660,17 +660,17 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		Amount: fare,
 	}
 
-	var paymentGatewayURL string
-	if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	// paymentGatewayURL, err := settingCache.Get(ctx, "payment_gateway_url")
-	// if err != nil {
+	// var paymentGatewayURL string
+	// if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
 	// 	writeError(w, http.StatusInternalServerError, err)
 	// 	return
 	// }
+
+	paymentGatewayURL, err := settingCache.Get(ctx, "payment_gateway_url")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	if err := requestPaymentGatewayPostPayment(ctx, paymentGatewayURL, paymentToken.Token, paymentGatewayRequest, func() ([]Ride, error) {
 		rides := []Ride{}
