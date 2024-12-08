@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -21,29 +22,21 @@ import (
 
 var db *sqlx.DB
 
-func init() {
-	// TextHandler を使用してログを設定
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		Level: slog.LevelDebug, // ログレベルをINFO以上に設定
-	})))
-}
-
 func main() {
 	mux := setup()
 
 	go func() {
-		// interval := 500 // milli seconds
-		// if vStr, exists := os.LookupEnv("ISUCON_MATCHING_INTERVAL"); exists {
-		// 	if val, err := strconv.Atoi(vStr); err == nil {
-		// 		// interval = val
-		// 	}
-		// }
-		ticker := time.NewTicker(500 * time.Millisecond)
+		interval := 500 // milli seconds
+		if vStr, exists := os.LookupEnv("ISUCON_MATCHING_INTERVAL"); exists {
+			if val, err := strconv.Atoi(vStr); err == nil {
+				interval = val
+			}
+		}
+		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 		defer ticker.Stop()
 
 		for range ticker.C {
-			slog.Info("internalGetMatching")
-			// internalGetMatching(context.Background())
+			internalGetMatching(context.Background())
 		}
 	}()
 
