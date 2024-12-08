@@ -159,6 +159,8 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chairLocationsCache.Forget(chair.ID)
+
 	location := &ChairLocation{
 		ID:        lastLocation.ID,
 		ChairID:   chair.ID,
