@@ -1,0 +1,195 @@
+- hosts: all # group_vars/all.yml が読み込まれる
+  vars:
+    repository_dest: "/home/{{ ansible_user }}/repo"
+  tasks:
+    - name: Set up apt
+      become: yes
+      block:
+        - name: apt autoremove
+          apt:
+            autoremove: yes
+        - name: Update apt cache
+          apt:
+            update_cache: yes
+            upgrade: yes
+        - name: Install apt packages
+          apt:
+            name:
+              - build-essential
+              - curl
+              - dstat
+              - git
+              - graphviz
+              - htop
+              - jq
+              - percona-toolkit
+              - tree
+              - vim
+              - wget
+
+    - name: Set up SSH
+      become: yes
+      block:
+        - name: Allow SSH login by adding authorized keys
+          authorized_key:
+            user: "{{ ansible_user }}"
+            state: present
+            key: "https://github.com/{{ item }}.keys"
+          loop:
+            - tesso57
+            - toshi-pono
+            - ras0q
+        - name: Allow public key authentication
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            regexp: "^PubkeyAuthentication "
+            line: "PubkeyAuthentication yes"
+            state: present
+        - name: Restart SSH service
+          service:
+            name: sshd
+            state: restarted
+
+    - name: Set up GitHub CLI
+      become: yes
+      block:
+        - name: Create /etc/apt/keyrings/
+          file:
+            path: /etc/apt/keyrings
+            state: directory
+            mode: 0755
+        - name: Download GitHub CLI key
+          get_url:
+            url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+            dest: /etc/apt/keyrings/githubcli-archive-keyring.gpg
+            mode: 0644
+        - name: Add GitHub CLI repository
+          apt_repository:
+            repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"
+            state: present
+        - name: Install GitHub CLI
+          apt:
+            name: gh
+            state: present
+
+    - name: Log in to GitHub
+      shell: |
+        gh auth login --with-token <<< "{{ github_token }}"
+        gh auth setup-git
+      args:
+        executable: /bin/bash
+
+    - name: Set Git global configuration
+      git_config:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        scope: global
+      loop: "{{ settings | dict2items }}"
+      vars:
+        settings:
+          user.name: "tetoraorg ({{ inventory_hostname }})"
+          user.email: "tetoraorg@example.com"
+          core.editor: "vim"
+          push.default: "current"
+          init.defaultbranch: "main"
+          fetch.prune: "true"
+          alias.lo: "log --oneline"
+
+    - name: Clone repository
+      shell: |
+        gh repo clone {{ repository }} {{ repository_dest }}
+      args:
+        executable: /bin/bash
+        creates: "{{ repository_dest }}"
+
+    - name: Create server configuration directory
+      file:
+        path: "{{ repository_dest }}/{{ inventory_hostname }}"
+        state: directory
+
+    - name: Check if files exist
+      stat:
+        path: "{{ item }}"
+      register: file_stat
+      loop:
+        - "/etc/systemd/system/{{ unit_name }}"
+        - "/home/isucon/.bashrc" # FIXME: 'ansible_user' undefined
+        - "/home/isucon/env.sh" # FIXME: 'ansible_user' undefined
+    - name: Copy files if they exist
+      copy:
+        src: "{{ item.item }}"
+        dest: "{{ repository_dest }}/{{ inventory_hostname }}/"
+        remote_src: yes
+      when: item.stat.exists and not item.stat.islnk
+      loop: "{{ file_stat.results }}"
+
+    - name: Setup .bashrc
+      block:
+        - name: Create symlink
+          file:
+            path: "/home/{{ ansible_user }}/.bashrc"
+            state: link
+            force: true
+            src: "{{ repository_dest }}/{{ inventory_hostname }}/.bashrc"
+        - name: Add custom Bash configuration to .bashrc
+          blockinfile:
+            path: "/home/{{ ansible_user }}/.bashrc"
+            marker: "# {mark} ANSIBLE MANAGED BLOCK for {{ inventory_hostname }}"
+            block: |
+              export SERVER_NAME={{ inventory_hostname }}
+              export REPOSITORY={{ repository }}
+              export REPOSITORY_DIR={{ repository_dest }}
+              export APP_NAME={{ app_name }}
+              export UNIT_NAME={{ unit_name }}
+              gh completion -s bash | bash
+              alias d="cd $REPOSITORY_DIR && git pull && ./$SERVER_NAME/deploy.sh"
+              alias h="htop"
+              alias j="sudo journalctl -u $UNIT_NAME"
+              s() { sudo systemctl $1 $UNIT_NAME }
+              memo() { gh issue comment ${1:-1} -R $REPOSITORY -F -; }
+
+    - name: Check GitHub issue existence or create it if not exists
+      run_once: yes
+      shell: |
+        gh issue view 1 -R {{ repository }} || gh issue create -R {{ repository }} -t "メモ" -b "システム情報、ベンチ点数など"
+      args:
+        executable: /bin/bash
+      register: system_info_issue
+
+    # TODO: goが認識されない sudoで実行されてる？
+    - name: Collect system information and create memo in GitHub issue
+      when: system_info_issue is changed
+      shell: |
+        source /home/{{ ansible_user }}/.bashrc
+        echo \
+        "# [{{ inventory_hostname }}] System Information
+        ## CPU
+        \`\`\`plaintext
+        \$ cat /proc/cpuinfo
+        $(cat /proc/cpuinfo)
+        \`\`\`
+
+        ## Memory
+        \`\`\`plaintext
+        \$ free -h
+        $(free -h)
+        \`\`\`
+
+        ## Services
+        \`\`\`plaintext
+        \$ systemctl list-units --type=service --state=running
+        $(systemctl list-units --type=service --state=running)
+        \`\`\`
+
+        ## Tool Versions
+        \`\`\`plaintext
+        \$ go version
+        $(go version 2>&1)
+        \$ mysql --version
+        $(mysql --version 2>&1)
+        \$ nginx -v
+        $(nginx -v 2>&1)
+        \`\`\`
+        " | gh issue comment 1 -R {{ repository }} -F -
+      args:
+        executable: /bin/bash

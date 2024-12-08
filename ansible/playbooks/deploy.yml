@@ -1,0 +1,17 @@
+- hosts: all # group_vars/all.yml が読み込まれる
+  vars:
+    repository_dest: "/home/{{ ansible_user }}/repo"
+    branch: "main"
+  tasks:
+    - name: Git Switch
+      shell: |
+        cd {{ repository_dest }}
+        git switch {{ branch }}
+      args:
+        executable: /bin/bash
+    - name: Deploy
+      shell: |
+        source ~/.bashrc
+        d # deploy
+      args:
+        executable: /bin/bash
