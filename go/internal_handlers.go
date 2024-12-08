@@ -103,9 +103,10 @@ func internalGetMatching(ctx context.Context) {
 		})
 
 		for _, chair := range chairs {
-			// if calculateDistance(chair.Latitude, chair.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude) > 50 {
-			// 	break
-			// }
+			dis := calculateDistance(chair.Latitude, chair.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude)
+			if dis > 1000 {
+				break
+			}
 
 			ridesInChair := make([]*Ride, 0, 100)
 			for _, ride := range rides {
@@ -138,7 +139,7 @@ func internalGetMatching(ctx context.Context) {
 			}
 
 			if allReady {
-				slog.Info("Matched", "chair_id", chair.ID, "ride_id", nullRide.ID, "count", count, "i", i)
+				slog.Info("Matched", "chair_id", chair.ID, "ride_id", nullRide.ID, "count", count, "i", i, "dis", dis)
 				if _, err := tx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
 					return
