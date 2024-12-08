@@ -27,15 +27,10 @@ type ChairWithLocation struct {
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func internalGetMatching(ctx context.Context) {
-	tx, err := database().BeginTxx(ctx, nil)
-	if err != nil {
-		slog.Error("Failed to begin transaction", err)
-		return
-	}
-	defer tx.Rollback()
+	db := database()
 
 	var chairs []*ChairWithLocation
-	if err := tx.SelectContext(ctx, &chairs, "SELECT c.*, cl.latitude AS latitude, cl.longitude AS longitude FROM chairs c INNER JOIN chair_locations cl ON c.id = cl.chair_id WHERE c.is_active = TRUE"); err != nil {
+	if err := db.SelectContext(ctx, &chairs, "SELECT c.*, cl.latitude AS latitude, cl.longitude AS longitude FROM chairs c INNER JOIN chair_locations cl ON c.id = cl.chair_id WHERE c.is_active = TRUE"); err != nil {
 		slog.Error("Failed to fetch chairs", err)
 		return
 	}
@@ -49,7 +44,7 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	var nullRides []*Ride
-	if err := tx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at ASC"); err != nil {
+	if err := db.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at ASC"); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
@@ -63,7 +58,7 @@ func internalGetMatching(ctx context.Context) {
 		slog.Error("Failed to parse rides in query", err)
 		return
 	}
-	if err := tx.SelectContext(ctx, &rides, tx.Rebind(query), params...); err != nil {
+	if err := db.SelectContext(ctx, &rides, db.Rebind(query), params...); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
@@ -81,7 +76,7 @@ func internalGetMatching(ctx context.Context) {
 			slog.Error("Failed to parse ride_statuses in query", err)
 			return
 		}
-		if err := tx.SelectContext(ctx, &rideStatuses, tx.Rebind(query), params...); err != nil {
+		if err := db.SelectContext(ctx, &rideStatuses, db.Rebind(query), params...); err != nil {
 			slog.Error("Failed to fetch ride_statuses", err)
 			return
 		}
@@ -138,13 +133,11 @@ func internalGetMatching(ctx context.Context) {
 			}
 
 			if allReady {
-				if _, err := tx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
+				if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
 					break
 				}
 			}
 		}
 	}
-
-	_ = tx.Commit()
 }
