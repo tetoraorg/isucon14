@@ -1,6 +1,6 @@
 ALTER TABLE chairs
   ADD COLUMN total_distance INTEGER NOT NULL DEFAULT 0 COMMENT '総移動距離',
-  ADD COLUMN total_distance_updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '総移動距離更新日時';
+  ADD COLUMN total_distance_updated_at DATETIME(6) DEFAULT NULL COMMENT '総移動距離更新日時';
 
 UPDATE chairs
 LEFT JOIN (
@@ -21,4 +21,4 @@ LEFT JOIN (
 ON `distance_table`.`chair_id` = `chairs`.`id`
 SET 
   `chairs`.`total_distance` = IFNULL(`distance_table`.`total_distance`, 0),
-  `chairs`.`total_distance_updated_at` = IFNULL(`distance_table`.`total_distance_updated_at`, CURRENT_TIMESTAMP(6));
+  `chairs`.`total_distance_updated_at` = `distance_table`.`total_distance_updated_at`;
