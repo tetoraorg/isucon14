@@ -616,8 +616,14 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		Amount: fare,
 	}
 
-	var paymentGatewayURL string
-	if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
+	// var paymentGatewayURL string
+	// if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+
+	paymentGatewayURL, err := settingCache.Get(ctx, "payment_gateway_url")
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}

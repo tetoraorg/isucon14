@@ -60,6 +60,13 @@ var ownerByRegisterCache, _ = sc.New(func(ctx context.Context, register string) 
 	return &owner, err
 }, 90*time.Second, 90*time.Second)
 
+var settingCache, _ = sc.New(func(ctx context.Context, name string) (string, error) {
+	var setting string
+	query := "SELECT * FROM settings WHERE name = ?"
+	err := database().GetContext(ctx, &setting, query, name)
+	return setting, err
+}, 90*time.Second, 90*time.Second)
+
 func main() {
 	mux := setup()
 
@@ -176,6 +183,8 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	settingCache.Purge()
 
 	userByIDCache.Purge()
 	userByTokenCache.Purge()
