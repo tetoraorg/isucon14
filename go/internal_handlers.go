@@ -40,25 +40,23 @@ func internalGetMatching(ctx context.Context) {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
-	if len(rides) == 0 {
-		slog.Info("No rides to match in chairs")
-		return
-	}
 
-	rideIDs := make([]string, 0, len(rides))
-	for _, ride := range rides {
-		rideIDs = append(rideIDs, ride.ID)
-	}
+	rideStatuses := []*RideStatus{}
+	if len(rides) >= 0 {
+		rideIDs := make([]string, 0, len(rides))
+		for _, ride := range rides {
+			rideIDs = append(rideIDs, ride.ID)
+		}
 
-	var rideStatuses []*RideStatus
-	query, params, err = sqlx.In("SELECT * FROM ride_statuses WHERE ride_id IN (?) ORDER BY created_desc DESC", rideIDs)
-	if err != nil {
-		slog.Error("Failed to parse ride_statuses in query", err)
-		return
-	}
-	if err := database().SelectContext(ctx, &rideStatuses, database().Rebind(query), params...); err != nil {
-		slog.Error("Failed to fetch ride_statuses", err)
-		return
+		query, params, err = sqlx.In("SELECT * FROM ride_statuses WHERE ride_id IN (?) ORDER BY created_desc DESC", rideIDs)
+		if err != nil {
+			slog.Error("Failed to parse ride_statuses in query", err)
+			return
+		}
+		if err := database().SelectContext(ctx, &rideStatuses, database().Rebind(query), params...); err != nil {
+			slog.Error("Failed to fetch ride_statuses", err)
+			return
+		}
 	}
 
 	rideStatusesByRideID := make(map[string][]*RideStatus)
