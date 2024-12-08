@@ -177,7 +177,9 @@ func writeJSONForSSE(w http.ResponseWriter, statusCode int, v interface{}) {
 	}
 	w.WriteHeader(statusCode)
 	w.Write(buf.Bytes())
-	w.Write([]byte("\n"))
+	w.Write([]byte("\n\n"))
+
+	slog.Info("sse response wrote", buf.String())
 }
 
 func writeError(w http.ResponseWriter, statusCode int, err error) {
