@@ -112,9 +112,9 @@ func internalGetMatching(ctx context.Context) {
 					slog.Error("Failed to update ride", err)
 					return
 				}
-
-				_ = tx.Commit()
 			}
 		}
 	}
+
+	_ = tx.Commit()
 }
