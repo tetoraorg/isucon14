@@ -209,8 +209,15 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
+	ridesTx, err := ridesDatabase().Beginx()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	defer ridesTx.Rollback()
+
 	rides := []Ride{}
-	if err := tx.SelectContext(
+	if err := ridesTx.SelectContext(
 		ctx,
 		&rides,
 		`SELECT * FROM rides WHERE user_id = ? ORDER BY created_at DESC`,
@@ -222,7 +229,7 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 
 	items := []getAppRidesResponseItem{}
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
+		status, err := getLatestRideStatus(ctx, ridesTx, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -276,6 +283,11 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	if err := ridesTx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
