@@ -170,6 +170,7 @@ func writeJSON(w http.ResponseWriter, statusCode int, v interface{}) {
 
 func writeJSONForSSE(w http.ResponseWriter, statusCode int, v interface{}) {
 	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Connection", "keep-alive")
 
 	buf := new(bytes.Buffer)
 	err := encoder.NewStreamEncoder(buf).Encode(v)

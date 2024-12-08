@@ -254,8 +254,23 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	chair := ctx.Value("chair").(*Chair)
 
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Connection", "keep-alive")
+	initialRide := &Ride{}
+	if err := db.GetContext(ctx, initialRide, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
+				RetryAfterMs: 30,
+			})
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	ch, ok := updateRideStatusCh[chair.ID]
+	if !ok {
+		ch = make(chan *RideRideStatus, 1)
+		updateRideStatusCh[chair.ID] = ch
+	}
+	ch <- &RideRideStatus{r: initialRide, s: nil}
 
 	for {
 		slog.Info("waiting for updateRideStatusCh", "chair.ID", chair.ID)
