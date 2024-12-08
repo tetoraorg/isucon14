@@ -75,6 +75,7 @@ func internalGetMatching(ctx context.Context) {
 			rideIDs = append(rideIDs, ride.ID)
 		}
 
+		// 最新だけを取ればよい
 		query, params, err = sqlx.In("SELECT * FROM ride_statuses WHERE ride_id IN (?) ORDER BY created_at DESC", rideIDs)
 		if err != nil {
 			slog.Error("Failed to parse ride_statuses in query", err)
@@ -92,6 +93,9 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))
+	if len(nullRides) > 0 {
+		slog.Info("Oldest ride", "id", nullRides[0].ID, "created_at", nullRides[0].CreatedAt, "duration", time.Since(nullRides[0].CreatedAt))
+	}
 	for _, nullRide := range nullRides {
 		sort.Slice(chairs, func(i, j int) bool {
 			return calculateDistance(chairs[i].Latitude, chairs[i].Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude) <
