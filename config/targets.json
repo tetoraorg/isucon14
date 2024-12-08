@@ -2,55 +2,55 @@
   {
     "Type": "pprof",
     "Label": "s1",
-    "URL": "http://18.177.165.239:8080/debug/pprof/profile",
+    "URL": "http://18.177.165.239:9000/debug/pprof/profile",
     "Duration": 50
   },
   {
     "Type": "httplog",
     "Label": "s1",
-    "URL": "http://18.177.165.239:8080/debug/log/httplog",
+    "URL": "http://18.177.165.239:9000/debug/log/httplog",
     "Duration": 50
   },
   {
     "Type": "slowlog",
     "Label": "s1",
-    "URL": "http://18.177.165.239:8080/debug/log/slowlog",
+    "URL": "http://18.177.165.239:9000/debug/log/slowlog",
     "Duration": 50
   },
   {
     "Type": "pprof",
     "Label": "s2",
-    "URL": "http://57.180.110.59:8080/debug/pprof/profile",
+    "URL": "http://57.180.110.59:9000/debug/pprof/profile",
     "Duration": 50
   },
   {
     "Type": "httplog",
     "Label": "s2",
-    "URL": "http://57.180.110.59:8080/debug/log/httplog",
+    "URL": "http://57.180.110.59:9000/debug/log/httplog",
     "Duration": 50
   },
   {
     "Type": "slowlog",
     "Label": "s2",
-    "URL": "http://57.180.110.59:8080/debug/log/slowlog",
+    "URL": "http://57.180.110.59:9000/debug/log/slowlog",
     "Duration": 50
   },
   {
     "Type": "pprof",
     "Label": "s3",
-    "URL": "http://54.249.86.106:8080/debug/pprof/profile",
+    "URL": "http://54.249.86.106:9000/debug/pprof/profile",
     "Duration": 50
   },
   {
     "Type": "httplog",
     "Label": "s3",
-    "URL": "http://54.249.86.106:8080/debug/log/httplog",
+    "URL": "http://54.249.86.106:9000/debug/log/httplog",
     "Duration": 50
   },
   {
     "Type": "slowlog",
     "Label": "s3",
-    "URL": "http://54.249.86.106:8080/debug/log/slowlog",
+    "URL": "http://54.249.86.106:9000/debug/log/slowlog",
     "Duration": 50
   }
 ]
