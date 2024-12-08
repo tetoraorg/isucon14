@@ -14,6 +14,10 @@ func internalGetMatching(ctx context.Context) {
 		slog.Error("Failed to fetch chairs", err)
 		return
 	}
+	if len(chairs) == 0 {
+		slog.Info("No active chairs")
+		return
+	}
 
 	chairIDs := make([]string, 0, len(chairs))
 	for _, chair := range chairs {
@@ -28,6 +32,10 @@ func internalGetMatching(ctx context.Context) {
 	}
 	if err := database().SelectContext(ctx, &rides, database().Rebind(query), params...); err != nil {
 		slog.Error("Failed to fetch rides", err)
+		return
+	}
+	if len(rides) == 0 {
+		slog.Info("No rides to match in chairs")
 		return
 	}
 
@@ -65,6 +73,11 @@ func internalGetMatching(ctx context.Context) {
 			matchedRide = ride
 			break
 		}
+	}
+
+	if matchedRide == nil {
+		slog.Info("No ride to match")
+		return
 	}
 
 	if _, err := database().ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matchedRide.ChairID, matchedRide.ID); err != nil {
