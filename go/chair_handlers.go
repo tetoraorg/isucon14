@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
@@ -311,11 +312,13 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	})
 
 	for {
+		slog.Info("waiting for updateRideStatusCh", "chair.ID", chair.ID)
 		select {
 		case <-r.Context().Done():
 			_ = tx.Commit()
 			return
 		case rrs := <-updateRideStatusCh[chair.ID]:
+			slog.Info("chairGetNotification", "rrs", rrs)
 			err := tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ?", rrs.r.UserID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
