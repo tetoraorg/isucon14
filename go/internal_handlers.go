@@ -92,12 +92,10 @@ func internalGetMatching(ctx context.Context) {
 		rideStatusesByRideID[rideStatus.RideID] = append(rideStatusesByRideID[rideStatus.RideID], rideStatus)
 	}
 
-	slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))
 	if len(nullRides) > 0 {
+		slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))
 		slog.Info("Oldest ride", "id", nullRides[0].ID, "created_at", nullRides[0].CreatedAt, "duration", time.Since(nullRides[0].CreatedAt))
 	}
-
-	upsertIDs := make([]string, 0, len(nullRides))
 	for _, nullRide := range nullRides {
 		sort.Slice(chairs, func(i, j int) bool {
 			return calculateDistance(chairs[i].Latitude, chairs[i].Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude) <
@@ -140,23 +138,12 @@ func internalGetMatching(ctx context.Context) {
 			}
 
 			if allReady {
-				upsertIDs = append(upsertIDs, nullRide.ID, chair.ID)
+				if _, err := tx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
+					slog.Error("Failed to update ride", err)
+					break
+				}
 			}
 		}
-	}
-
-	// bulk upsert
-	query = "INSERT INTO rides (id, chair_id) VALUES "
-	for i := 0; i < len(upsertIDs); i += 2 {
-		if i > 0 {
-			query += ","
-		}
-		query += "(?, ?)"
-	}
-	query += " ON DUPLICATE KEY UPDATE chair_id = VALUES(chair_id)"
-	if _, err := tx.ExecContext(ctx, query, upsertIDs...); err != nil {
-		slog.Error("Failed to upsert rides", err)
-		return
 	}
 
 	_ = tx.Commit()
