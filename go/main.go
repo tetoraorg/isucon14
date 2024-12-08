@@ -15,7 +15,29 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kaz/pprotein/integration"
+	"github.com/motoki317/sc"
 )
+
+var userByIDCache, _ = sc.New(func(ctx context.Context, id string) (*User, error) {
+	var user User
+	query := "SELECT * FROM users WHERE id = ?"
+	err := database().GetContext(ctx, &user, query, id)
+	return &user, err
+}, 90*time.Second, 90*time.Second)
+
+var userByTokenCache, _ = sc.New(func(ctx context.Context, token string) (*User, error) {
+	var user User
+	query := "SELECT * FROM users WHERE access_token = ?"
+	err := database().GetContext(ctx, &user, query, token)
+	return &user, err
+}, 90*time.Second, 90*time.Second)
+
+var userByInviteCache, _ = sc.New(func(ctx context.Context, invite string) (*User, error) {
+	var user User
+	query := "SELECT * FROM users WHERE invitation_code = ?"
+	err := database().GetContext(ctx, &user, query, invite)
+	return &user, err
+}, 90*time.Second, 90*time.Second)
 
 func main() {
 	mux := setup()
@@ -133,6 +155,10 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	userByIDCache.Purge()
+	userByTokenCache.Purge()
+	userByInviteCache.Purge()
 
 	// pproteinにcollect requestを飛ばす
 	if os.Getenv("PROD") != "true" {

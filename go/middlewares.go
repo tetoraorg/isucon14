@@ -19,8 +19,18 @@ func appAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		accessToken := c.Value
-		user := &User{}
-		err = database().GetContext(ctx, user, "SELECT * FROM users WHERE access_token = ?", accessToken)
+		// user := &User{}
+		// err = database().GetContext(ctx, user, "SELECT * FROM users WHERE access_token = ?", accessToken)
+		// if err != nil {
+		// 	if errors.Is(err, sql.ErrNoRows) {
+		// 		writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
+		// 		return
+		// 	}
+		// 	writeError(w, http.StatusInternalServerError, err)
+		// 	return
+		// }
+
+		user, err := userByTokenCache.Get(ctx, accessToken)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
@@ -29,7 +39,6 @@ func appAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-
 		ctx = context.WithValue(ctx, "user", user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

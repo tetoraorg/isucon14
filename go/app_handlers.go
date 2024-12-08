@@ -84,8 +84,18 @@ func appPostUsers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// ユーザーチェック
-		var inviter User
-		err = tx.GetContext(ctx, &inviter, "SELECT * FROM users WHERE invitation_code = ?", *req.InvitationCode)
+		// var inviter User
+		// err = tx.GetContext(ctx, &inviter, "SELECT * FROM users WHERE invitation_code = ?", *req.InvitationCode)
+		// if err != nil {
+		// 	if errors.Is(err, sql.ErrNoRows) {
+		// 		writeError(w, http.StatusBadRequest, errors.New("この招待コードは使用できません。"))
+		// 		return
+		// 	}
+		// 	writeError(w, http.StatusInternalServerError, err)
+		// 	return
+		// }
+
+		inviter, err := userByInviteCache.Get(ctx, *req.InvitationCode)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusBadRequest, errors.New("この招待コードは使用できません。"))
