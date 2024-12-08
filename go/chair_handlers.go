@@ -289,6 +289,8 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	} else {
 		status = yetSentRideStatus.Status
 	}
+
+	_, _ = w.Write([]byte("data: "))
 	writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
 		Data: &chairGetNotificationResponseData{
 			RideID: ride.ID,
@@ -336,7 +338,6 @@ func chairSendNotification(w http.ResponseWriter, r *http.Request, tx *sqlx.Tx, 
 	}
 	// }
 
-	_, _ = w.Write([]byte("data: "))
 	writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
 		Data: &chairGetNotificationResponseData{
 			RideID: ride.ID,
