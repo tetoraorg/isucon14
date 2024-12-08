@@ -362,6 +362,7 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	updateRideCh <- struct{}{}
 
 	if _, err := tx.ExecContext(
 		ctx,
@@ -807,11 +808,11 @@ func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNoti
 	err := tx.SelectContext(
 		ctx,
 		&rideWithStatuses,
-		`SELECT 
-			r.id AS ride_id, 
-			r.chair_id, 
-			r.evaluation, 
-			rs.status, 
+		`SELECT
+			r.id AS ride_id,
+			r.chair_id,
+			r.evaluation,
+			rs.status,
 			rs.created_at
 		FROM rides r
 		INNER JOIN ride_statuses rs ON r.id = rs.ride_id
