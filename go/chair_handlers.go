@@ -257,7 +257,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	initialRide := &Ride{}
 	if err := database().GetContext(ctx, initialRide, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
+			writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
 				RetryAfterMs: 30,
 			})
 			return
