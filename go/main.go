@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -18,47 +19,47 @@ import (
 	"github.com/motoki317/sc"
 )
 
-var userByIDCache, _ = sc.New(func(ctx context.Context, id string) (*User, error) {
-	var user User
-	query := "SELECT * FROM users WHERE id = ?"
-	err := database().GetContext(ctx, &user, query, id)
-	return &user, err
-}, 90*time.Second, 90*time.Second)
+// var userByIDCache, _ = sc.New(func(ctx context.Context, id string) (*User, error) {
+// 	var user User
+// 	query := "SELECT * FROM users WHERE id = ?"
+// 	err := database().GetContext(ctx, &user, query, id)
+// 	return &user, err
+// }, 90*time.Second, 90*time.Second)
 
-var userByTokenCache, _ = sc.New(func(ctx context.Context, token string) (*User, error) {
-	var user User
-	query := "SELECT * FROM users WHERE access_token = ?"
-	err := database().GetContext(ctx, &user, query, token)
-	return &user, err
-}, 90*time.Second, 90*time.Second)
+// var userByTokenCache, _ = sc.New(func(ctx context.Context, token string) (*User, error) {
+// 	var user User
+// 	query := "SELECT * FROM users WHERE access_token = ?"
+// 	err := database().GetContext(ctx, &user, query, token)
+// 	return &user, err
+// }, 90*time.Second, 90*time.Second)
 
-var userByInviteCache, _ = sc.New(func(ctx context.Context, invite string) (*User, error) {
-	var user User
-	query := "SELECT * FROM users WHERE invitation_code = ?"
-	err := database().GetContext(ctx, &user, query, invite)
-	return &user, err
-}, 90*time.Second, 90*time.Second)
+// var userByInviteCache, _ = sc.New(func(ctx context.Context, invite string) (*User, error) {
+// 	var user User
+// 	query := "SELECT * FROM users WHERE invitation_code = ?"
+// 	err := database().GetContext(ctx, &user, query, invite)
+// 	return &user, err
+// }, 90*time.Second, 90*time.Second)
 
-var ownerByIDCache, _ = sc.New(func(ctx context.Context, id string) (*Owner, error) {
-	var owner Owner
-	query := "SELECT * FROM owners WHERE id = ?"
-	err := database().GetContext(ctx, &owner, query, id)
-	return &owner, err
-}, 90*time.Second, 90*time.Second)
+// var ownerByIDCache, _ = sc.New(func(ctx context.Context, id string) (*Owner, error) {
+// 	var owner Owner
+// 	query := "SELECT * FROM owners WHERE id = ?"
+// 	err := database().GetContext(ctx, &owner, query, id)
+// 	return &owner, err
+// }, 90*time.Second, 90*time.Second)
 
-var ownerByTokenCache, _ = sc.New(func(ctx context.Context, token string) (*Owner, error) {
-	var owner Owner
-	query := "SELECT * FROM owners WHERE access_token = ?"
-	err := database().GetContext(ctx, &owner, query, token)
-	return &owner, err
-}, 90*time.Second, 90*time.Second)
+// var ownerByTokenCache, _ = sc.New(func(ctx context.Context, token string) (*Owner, error) {
+// 	var owner Owner
+// 	query := "SELECT * FROM owners WHERE access_token = ?"
+// 	err := database().GetContext(ctx, &owner, query, token)
+// 	return &owner, err
+// }, 90*time.Second, 90*time.Second)
 
-var ownerByRegisterCache, _ = sc.New(func(ctx context.Context, register string) (*Owner, error) {
-	var owner Owner
-	query := "SELECT * FROM owners WHERE chair_register_token = ?"
-	err := database().GetContext(ctx, &owner, query, register)
-	return &owner, err
-}, 90*time.Second, 90*time.Second)
+// var ownerByRegisterCache, _ = sc.New(func(ctx context.Context, register string) (*Owner, error) {
+// 	var owner Owner
+// 	query := "SELECT * FROM owners WHERE chair_register_token = ?"
+// 	err := database().GetContext(ctx, &owner, query, register)
+// 	return &owner, err
+// }, 90*time.Second, 90*time.Second)
 
 var settingCache, _ = sc.New(func(ctx context.Context, name string) (string, error) {
 	var setting string
@@ -73,6 +74,17 @@ var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*Pay
 	err := database().GetContext(ctx, &paymentToken, query, userID)
 	return &paymentToken, err
 }, 90*time.Second, 90*time.Second)
+
+// var latestRideStatusCache, _ = sc.New(func(ctx context.Context, rideID string) (string, error) {
+// 	status := ""
+// 	if err := ridesDatabase().GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
+// 		return "", err
+// 	}
+
+// 	return status, nil
+// }, 90*time.Second, 90*time.Second)
+
+var chairLocationsCache = sync.Map{}
 
 func main() {
 	mux := setup()
@@ -103,10 +115,18 @@ func setup() http.Handler {
 	// 再起動試験対策
 	for {
 		err := database().Ping()
-		if err == nil {
+		err2 := ridesDatabase().Ping()
+		if err == nil && err2 == nil {
 			break
 		}
-		slog.Error("DB not ready", err)
+
+		if err != nil {
+			slog.Error("DB not ready", err)
+		}
+
+		if err2 != nil {
+			slog.Error("Rides DB not ready", err2)
+		}
 		time.Sleep(time.Second * 2)
 	}
 	slog.Info("DB ready")
@@ -194,14 +214,14 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	settingCache.Purge()
 	paymentTokenCache.Purge()
 
-	userByIDCache.Purge()
-	userByTokenCache.Purge()
-	userByInviteCache.Purge()
+	// userByIDCache.Purge()
+	// userByTokenCache.Purge()
+	// userByInviteCache.Purge()
 	chairAccessTokenCache.Purge()
 
-	ownerByIDCache.Purge()
-	ownerByTokenCache.Purge()
-	ownerByRegisterCache.Purge()
+	// ownerByIDCache.Purge()
+	// ownerByTokenCache.Purge()
+	// ownerByRegisterCache.Purge()
 
 	// pproteinにcollect requestを飛ばす
 	if os.Getenv("PROD") != "true" {

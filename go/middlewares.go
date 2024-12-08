@@ -19,18 +19,8 @@ func appAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		accessToken := c.Value
-		// user := &User{}
-		// err = database().GetContext(ctx, user, "SELECT * FROM users WHERE access_token = ?", accessToken)
-		// if err != nil {
-		// 	if errors.Is(err, sql.ErrNoRows) {
-		// 		writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
-		// 		return
-		// 	}
-		// 	writeError(w, http.StatusInternalServerError, err)
-		// 	return
-		// }
-
-		user, err := userByTokenCache.Get(ctx, accessToken)
+		user := &User{}
+		err = database().GetContext(ctx, user, "SELECT * FROM users WHERE access_token = ?", accessToken)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
@@ -39,6 +29,16 @@ func appAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+
+		// user, err := userByTokenCache.Get(ctx, accessToken)
+		// if err != nil {
+		// 	if errors.Is(err, sql.ErrNoRows) {
+		// 		writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
+		// 		return
+		// 	}
+		// 	writeError(w, http.StatusInternalServerError, err)
+		// 	return
+		// }
 		ctx = context.WithValue(ctx, "user", user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -53,18 +53,8 @@ func ownerAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		accessToken := c.Value
-		// owner := &Owner{}
-		// if err := database().GetContext(ctx, owner, "SELECT * FROM owners WHERE access_token = ?", accessToken); err != nil {
-		// 	if errors.Is(err, sql.ErrNoRows) {
-		// 		writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
-		// 		return
-		// 	}
-		// 	writeError(w, http.StatusInternalServerError, err)
-		// 	return
-		// }
-
-		owner, err := ownerByTokenCache.Get(ctx, accessToken)
-		if err != nil {
+		owner := &Owner{}
+		if err := database().GetContext(ctx, owner, "SELECT * FROM owners WHERE access_token = ?", accessToken); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
 				return
@@ -72,6 +62,16 @@ func ownerAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+
+		// owner, err := ownerByTokenCache.Get(ctx, accessToken)
+		// if err != nil {
+		// 	if errors.Is(err, sql.ErrNoRows) {
+		// 		writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
+		// 		return
+		// 	}
+		// 	writeError(w, http.StatusInternalServerError, err)
+		// 	return
+		// }
 
 		ctx = context.WithValue(ctx, "owner", owner)
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -104,7 +104,7 @@ func chairAuthMiddleware(next http.Handler) http.Handler {
 
 var chairAccessTokenCache, _ = sc.New(func(ctx context.Context, key string) (*ChairOnlyNoChange, error) {
 	chair := Chair{}
-	err := database().GetContext(ctx, &chair, "SELECT * FROM chairs WHERE access_token = ?", key)
+	err := ridesDatabase().GetContext(ctx, &chair, "SELECT * FROM chairs WHERE access_token = ?", key)
 	if err != nil {
 		return &ChairOnlyNoChange{}, err
 	}

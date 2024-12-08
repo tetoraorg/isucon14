@@ -65,6 +65,6 @@ func database() *sqlx.DB {
 	return dbs[0]
 }
 
-// func chairDatabase() *sqlx.DB {
-// 	return dbs[1]
-// }
+func ridesDatabase() *sqlx.DB {
+	return dbs[1]
+}
