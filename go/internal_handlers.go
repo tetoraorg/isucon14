@@ -25,13 +25,13 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	var nullRides []*Ride
-	if err := database().SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE status = \"COMPLETED\""); err != nil {
+	if err := database().SelectContext(ctx, &nullRides, "SELECT r.* FROM rides r INNER JOIN ride_statuses rs ON r.id = rs.ride_id WHERE rs.status = \"COMPLETED\""); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
 
 	var rides []*Ride
-	query, params, err := sqlx.In("SELECT * FROM rides WHERE chair_id IN (?) AND status <> \"COMPLETED\"", chairIDs)
+	query, params, err := sqlx.In("SELECT r.* FROM rides r INNER JOIN ride_statuses rs ON r.id = rs.ride_id WHERE r.chair_id IN (?) AND rs.status <> \"COMPLETED\"", chairIDs)
 	if err != nil {
 		slog.Error("Failed to parse rides in query", err)
 		return
