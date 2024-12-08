@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -73,6 +74,15 @@ var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*Pay
 	err := database().GetContext(ctx, &paymentToken, query, userID)
 	return &paymentToken, err
 }, 90*time.Second, 90*time.Second)
+
+// var chairLocationsCache, _ = sc.New(func(ctx context.Context, chairID string) (*ChairLocation, error) {
+// 	var chairLocation ChairLocation
+// 	query := `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`
+// 	err := database().GetContext(ctx, &chairLocation, query, chairID)
+// 	return &chairLocation, err
+// }, 90*time.Second, 90*time.Second)
+
+var chairLocationsCache = sync.Map{}
 
 func main() {
 	mux := setup()
