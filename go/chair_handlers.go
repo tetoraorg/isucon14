@@ -135,7 +135,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
     		latitude = VALUES(latitude),
     		longitude = VALUES(longitude),
     		created_at = VALUES(created_at)`,
-		req.Latitude, req.Longitude, new_created_at, chair.ID,
+		chair.ID, req.Latitude, req.Longitude, new_created_at,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
