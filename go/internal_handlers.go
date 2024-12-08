@@ -48,7 +48,7 @@ func internalGetMatching(ctx context.Context) {
 			rideIDs = append(rideIDs, ride.ID)
 		}
 
-		query, params, err = sqlx.In("SELECT * FROM ride_statuses WHERE ride_id IN (?) ORDER BY created_desc DESC", rideIDs)
+		query, params, err = sqlx.In("SELECT * FROM ride_statuses WHERE ride_id IN (?) ORDER BY created_at DESC", rideIDs)
 		if err != nil {
 			slog.Error("Failed to parse ride_statuses in query", err)
 			return
