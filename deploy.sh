@@ -38,6 +38,8 @@ sudo systemctl daemon-reload
 sudo systemctl restart $UNIT_NAME
 sudo systemctl restart nginx
 sudo systemctl restart mysql
+sudo systemctl stop isuride-matcher.service
+sudo systemctl disable isuride-matcher.service
 sudo sysctl -p
 # Slow Query Log
 if $PROD; then
