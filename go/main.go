@@ -81,8 +81,18 @@ var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*Pay
 // 		return "", err
 // 	}
 
-// 	return status, nil
-// }, 90*time.Second, 90*time.Second)
+//		return status, nil
+//	}, 90*time.Second, 90*time.Second)
+func init() {
+	slog.SetDefault(
+		slog.New(
+			slog.NewTextHandler(
+				os.Stdout,
+				&slog.HandlerOptions{Level: slog.LevelDebug},
+			),
+		),
+	)
+}
 
 var chairLocationsCache = sync.Map{}
 

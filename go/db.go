@@ -53,7 +53,7 @@ func initDatabase() (err error) {
 		if err != nil {
 			panic(err)
 		}
-		maxConnsInt := 25
+		maxConnsInt := 50
 		dbs[i].SetMaxOpenConns(maxConnsInt)
 		dbs[i].SetMaxIdleConns(maxConnsInt * 2)
 		dbs[i].SetConnMaxLifetime(3 * time.Minute)
