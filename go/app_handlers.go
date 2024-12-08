@@ -319,7 +319,7 @@ func getLatestRideStatus(ctx context.Context, _tx executableGet, rideID string) 
 	// }
 
 	status := ""
-	if err := ridesDatabase().GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
+	if err := _tx.GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
 		return "", err
 	}
 	return status, nil
