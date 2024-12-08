@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
-	"math"
 	"sort"
 	"time"
 
@@ -95,16 +94,15 @@ func internalGetMatching(ctx context.Context) {
 	slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))
 	for _, nullRide := range nullRides {
 		sort.Slice(chairs, func(i, j int) bool {
-			return math.Abs(
-				float64(chairs[i].Latitude-nullRide.PickupLatitude)+
-					float64(chairs[i].Longitude-nullRide.PickupLongitude),
-			) < math.Abs(
-				float64(chairs[j].Latitude-nullRide.PickupLatitude)+
-					float64(chairs[j].Longitude-nullRide.PickupLongitude),
-			)
+			return calculateDistance(chairs[i].Latitude, chairs[i].Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude) <
+				calculateDistance(chairs[j].Latitude, chairs[j].Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude)
 		})
 
 		for _, chair := range chairs {
+			if calculateDistance(chair.Latitude, chair.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude) > 50 {
+				break
+			}
+
 			ridesInChair := make([]*Ride, 0, 100)
 			for _, ride := range rides {
 				if ride.ChairID.String == chair.ID {
