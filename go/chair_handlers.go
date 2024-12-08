@@ -257,24 +257,23 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Connection", "keep-alive")
 
-	tx, err := db.Beginx()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer tx.Rollback()
-
 	for {
 		slog.Info("waiting for updateRideStatusCh", "chair.ID", chair.ID)
 		select {
 		case <-r.Context().Done():
-			_ = tx.Commit()
 			w.WriteHeader(http.StatusOK)
 			return
 		case rrs := <-updateRideStatusCh[chair.ID]:
+			tx, err := db.Beginx()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+				return
+			}
+			defer tx.Rollback()
+
 			slog.Info("chairGetNotification", "rrs", rrs)
 			user := &User{}
-			err := tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ?", rrs.r.UserID)
+			err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", rrs.r.UserID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
