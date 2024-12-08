@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"time"
+
+	"github.com/motoki317/sc"
 )
 
 func appAuthMiddleware(next http.Handler) http.Handler {
@@ -74,8 +77,7 @@ func chairAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		accessToken := c.Value
-		chair := &Chair{}
-		err = database().GetContext(ctx, chair, "SELECT * FROM chairs WHERE access_token = ?", accessToken)
+		chairOnlyNoChange, err := chairAccessTokenCache.Get(ctx, accessToken)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusUnauthorized, errors.New("invalid access token"))
@@ -85,7 +87,26 @@ func chairAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx = context.WithValue(ctx, "chair", chair)
+		ctx = context.WithValue(ctx, "chairOnlyNoChange", chairOnlyNoChange)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+
+var chairAccessTokenCache, _ = sc.New(func(ctx context.Context, key string) (*ChairOnlyNoChange, error) {
+	chair := Chair{}
+	err := database().GetContext(ctx, &chair, "SELECT * FROM chairs WHERE access_token = ?", key)
+	if err != nil {
+		return &ChairOnlyNoChange{}, err
+	}
+	chairOnlyNoChange := &ChairOnlyNoChange{
+		ID:          chair.ID,
+		OwnerID:     chair.OwnerID,
+		Name:        chair.Name,
+		Model:       chair.Model,
+		AccessToken: chair.AccessToken,
+		CreatedAt:   chair.CreatedAt,
+		UpdatedAt:   chair.UpdatedAt,
+	}
+
+	return chairOnlyNoChange, nil
+}, 1*time.Minute, 5*time.Minute)
