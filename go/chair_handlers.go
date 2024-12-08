@@ -257,7 +257,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	initialRide := &Ride{}
 	if err := database().GetContext(ctx, initialRide, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
+			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
 				RetryAfterMs: 30,
 			})
 		} else {
@@ -286,7 +286,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			}
 			defer tx.Rollback()
 
-			slog.Info("chairGetNotification", "rrs", rrs)
+			slog.Info("chairGetNotification", "rrs", rrs, "user", rrs.r.UserID)
 			user := &User{}
 			err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", rrs.r.UserID)
 			if err != nil {
