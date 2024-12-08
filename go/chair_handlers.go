@@ -260,7 +260,6 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
 				RetryAfterMs: 30,
 			})
-			return
 		}
 		writeError(w, http.StatusInternalServerError, err)
 		return
