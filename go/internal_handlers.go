@@ -137,7 +137,7 @@ func internalGetMatching(ctx context.Context) {
 				}
 			}
 
-			if count < 6 && allReady {
+			if allReady {
 				if _, err := tx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
 					return
