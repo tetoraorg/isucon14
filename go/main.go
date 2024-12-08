@@ -192,6 +192,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	settingCache.Purge()
+	paymentTokenCache.Purge()
 
 	userByIDCache.Purge()
 	userByTokenCache.Purge()
