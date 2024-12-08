@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
-
-	"golang.org/x/exp/rand"
 )
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
@@ -28,35 +26,8 @@ func internalGetMatching(ctx context.Context) {
 		return
 	}
 
-	// 空き椅子の総数を取得
-	var count int
-	err := db.GetContext(ctx, &count, `
-	SELECT COUNT(*) 
-	FROM chairs c
-	WHERE c.is_active = TRUE
-	  AND NOT EXISTS (
-	    SELECT 1
-	    FROM rides r
-	    JOIN ride_statuses rs ON r.id = rs.ride_id
-	    WHERE r.chair_id = c.id
-	    GROUP BY r.id
-	    HAVING COUNT(rs.chair_sent_at) <> 6
-	  )
-`)
-	if err != nil {
-		slog.Error("Failed to count empty chairs", err)
-		return
-	}
-	if count == 0 {
-		slog.Info("no available chairs")
-		return
-	}
-
-	// ランダムオフセット計算
-	offset := rand.Intn(count)
-
-	// オフセットを用いて1件取得
 	matched := &Chair{}
+	// 「空いている椅子」を一度のクエリで取得する例
 	if err := db.GetContext(ctx, matched, `
 	SELECT c.*
 	FROM chairs c
@@ -69,10 +40,15 @@ func internalGetMatching(ctx context.Context) {
 	    GROUP BY r.id
 	    HAVING COUNT(rs.chair_sent_at) <> 6
 	  )
-	ORDER BY id -- インデックス利用可能
-	LIMIT 1 OFFSET ?
-`, offset); err != nil {
-		slog.Error("Failed to fetch chair by offset", err)
+	ORDER BY RAND()
+	LIMIT 1
+`); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// 空いている椅子が無い場合はマッチングできない
+			slog.Info("no available chairs")
+			return
+		}
+		slog.Error("Failed to fetch empty chair", err)
 		return
 	}
 
