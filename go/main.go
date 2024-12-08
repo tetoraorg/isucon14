@@ -1,8 +1,8 @@
 package main
 
 import (
+	"bytes"
 	crand "crypto/rand"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strconv"
 
+	"github.com/bytedance/sonic/decoder"
+	"github.com/bytedance/sonic/encoder"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-sql-driver/mysql"
@@ -59,6 +61,7 @@ func setup() http.Handler {
 	dbConfig.Net = "tcp"
 	dbConfig.DBName = dbname
 	dbConfig.ParseTime = true
+	dbConfig.InterpolateParams = true
 
 	_db, err := sqlx.Connect("mysql", dbConfig.FormatDSN())
 	if err != nil {
@@ -164,30 +167,33 @@ type Coordinate struct {
 }
 
 func bindJSON(r *http.Request, v interface{}) error {
-	return json.NewDecoder(r.Body).Decode(v)
+	return decoder.NewStreamDecoder(r.Body).Decode(v)
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
-	buf, err := json.Marshal(v)
+
+	buf := new(bytes.Buffer)
+	err := encoder.NewStreamEncoder(buf).Encode(v)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(statusCode)
-	w.Write(buf)
+	w.Write(buf.Bytes())
 }
 
 func writeError(w http.ResponseWriter, statusCode int, err error) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	w.WriteHeader(statusCode)
-	buf, marshalError := json.Marshal(map[string]string{"message": err.Error()})
+	buf := new(bytes.Buffer)
+	marshalError := encoder.NewStreamEncoder(buf).Encode(map[string]string{"message": err.Error()})
 	if marshalError != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"error":"marshaling error failed"}`))
 		return
 	}
-	w.Write(buf)
+	w.Write(buf.Bytes())
 
 	slog.Error("error response wrote", err)
 }

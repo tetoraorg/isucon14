@@ -1,12 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/bytedance/sonic/decoder"
+	"github.com/bytedance/sonic/encoder"
 )
 
 var (
@@ -33,7 +35,7 @@ func handlePostPayments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req PostPaymentsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decoder.NewStreamDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "不正なリクエスト形式です"})
 		return
 	}
@@ -94,7 +96,7 @@ func getTokenFromAuthorizationHeader(r *http.Request) (string, error) {
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+	if err := encoder.NewEncoder(w).Encode(v); err != nil {
 		slog.Error(err.Error())
 	}
 }

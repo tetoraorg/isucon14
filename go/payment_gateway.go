@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/bytedance/sonic/decoder"
+	"github.com/bytedance/sonic/encoder"
 )
 
 var erroredUpstream = errors.New("errored upstream")
@@ -22,7 +24,8 @@ type paymentGatewayGetPaymentsResponseOne struct {
 }
 
 func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL string, token string, param *paymentGatewayPostPaymentRequest, retrieveRidesOrderByCreatedAtAsc func() ([]Ride, error)) error {
-	b, err := json.Marshal(param)
+	buf := new(bytes.Buffer)
+	err := encoder.NewStreamEncoder(buf).Encode(param)
 	if err != nil {
 		return err
 	}
@@ -32,7 +35,7 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 	retry := 0
 	for {
 		err := func() error {
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, paymentGatewayURL+"/payments", bytes.NewBuffer(b))
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, paymentGatewayURL+"/payments", bytes.NewBuffer(buf.Bytes()))
 			if err != nil {
 				return err
 			}
@@ -64,7 +67,7 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 					return fmt.Errorf("[GET /payments] unexpected status code (%d)", getRes.StatusCode)
 				}
 				var payments []paymentGatewayGetPaymentsResponseOne
-				if err := json.NewDecoder(getRes.Body).Decode(&payments); err != nil {
+				if err := decoder.NewStreamDecoder(getRes.Body).Decode(&payments); err != nil {
 					return err
 				}
 
