@@ -15,7 +15,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kaz/pprotein/integration"
+	"github.com/motoki317/sc"
 )
+
+var userCache, _ = sc.New(func(ctx context.Context, id string) (*User, error) {
+	var user User
+	query := "SELECT * FROM users WHERE id = ?"
+	err := database().GetContext(ctx, &user, query, id)
+	return &user, err
+}, 90*time.Second, 90*time.Second)
 
 func main() {
 	mux := setup()
@@ -133,6 +141,8 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	userCache.Purge()
 
 	// pproteinにcollect requestを飛ばす
 	if os.Getenv("PROD") != "true" {
