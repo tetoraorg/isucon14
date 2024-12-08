@@ -77,7 +77,7 @@ var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*Pay
 
 var latestRideStatusCache, _ = sc.New(func(ctx context.Context, rideID string) (string, error) {
 	status := ""
-	if err := database().GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
+	if err := ridesDatabase().GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
 		return "", err
 	}
 
@@ -115,10 +115,18 @@ func setup() http.Handler {
 	// 再起動試験対策
 	for {
 		err := database().Ping()
-		if err == nil {
+		err2 := ridesDatabase().Ping()
+		if err == nil && err2 == nil {
 			break
 		}
-		slog.Error("DB not ready", err)
+
+		if err != nil {
+			slog.Error("DB not ready", err)
+		}
+
+		if err2 != nil {
+			slog.Error("Rides DB not ready", err2)
+		}
 		time.Sleep(time.Second * 2)
 	}
 	slog.Info("DB ready")
