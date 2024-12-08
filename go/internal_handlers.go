@@ -41,6 +41,7 @@ func internalGetMatching(ctx context.Context) {
 		return
 	}
 
+	latestRideByChairIDCache.Forget(matched.ID)
 	if _, err := database().ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matched.ID, ride.ID); err != nil {
 		slog.Error("Failed to update ride", err)
 		return
