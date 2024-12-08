@@ -29,6 +29,10 @@ func internalGetMatching(ctx context.Context) {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
+	if len(nullRides) == 0 {
+		slog.Info("No null rides")
+		return
+	}
 
 	var rides []*Ride
 	query, params, err := sqlx.In("SELECT * FROM rides WHERE chair_id IN (?)", chairIDs)
