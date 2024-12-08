@@ -47,7 +47,7 @@ CREATE TABLE chair_locations
   longitude  INTEGER     NOT NULL COMMENT '緯度',
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '登録日時',
   PRIMARY KEY (id),
-  INDEX idx_chair_id (chair_id)
+  INDEX idx_chair_created_at_id (chair_id, created_at DESC)
 )
   COMMENT = '椅子の現在位置情報テーブル';
 
@@ -137,6 +137,7 @@ CREATE TABLE coupons
   discount   INTEGER      NOT NULL COMMENT '割引額',
   created_at DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '付与日時',
   used_by    VARCHAR(26)  NULL COMMENT 'クーポンが適用されたライドのID',
-  PRIMARY KEY (user_id, code)
+  PRIMARY KEY (user_id, code),
+  INDEX idx_used_by (used_by)
 )
   COMMENT 'クーポンテーブル';
