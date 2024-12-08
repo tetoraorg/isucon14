@@ -13,7 +13,6 @@ func internalGetMatching(ctx context.Context) {
 	ride := &Ride{}
 	if err := database().GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			slog.Info("no rides")
 			return
 		}
 		slog.Error("Failed to fetch ride", err)
