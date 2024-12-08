@@ -174,7 +174,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		distance = abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude)
 		if _, err := tx.ExecContext(ctx, `
 		UPDATE chairs
-		SET total_distance = total_distance + ?, 
+		SET total_distance = total_distance + ?,
 		    total_distance_updated_at = ?
 		WHERE id = ?
 	`, distance, location.CreatedAt, chair.ID); err != nil {
@@ -322,7 +322,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			},
 			Status: status,
 		},
-		RetryAfterMs: 30,
+		RetryAfterMs: 100,
 	})
 }
 
