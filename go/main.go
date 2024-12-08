@@ -35,12 +35,9 @@ func main() {
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				slog.Info("internalGetMatching")
-				internalGetMatching(context.Background())
-			}
+		for range ticker.C {
+			slog.Info("internalGetMatching")
+			internalGetMatching(context.Background())
 		}
 	}()
 
