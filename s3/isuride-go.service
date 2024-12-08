@@ -12,7 +12,7 @@ EnvironmentFile=/home/isucon/repo/s3/env.sh
 
 User=isucon
 Group=isucon
-ExecStart=/home/isucon/webapp/go/isuride
+ExecStart=/home/isucon/repo/go/isuride
 ExecStop=/bin/kill -s QUIT $MAINPID
 
 Restart=on-failure
