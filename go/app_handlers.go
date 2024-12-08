@@ -923,7 +923,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
 			}
-			writeError(w, http.StatusConflict, err)
+			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
 
