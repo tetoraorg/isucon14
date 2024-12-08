@@ -42,7 +42,7 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	rideStatuses := []*RideStatus{}
-	if len(rides) >= 0 {
+	if len(rides) > 0 {
 		rideIDs := make([]string, 0, len(rides))
 		for _, ride := range rides {
 			rideIDs = append(rideIDs, ride.ID)
