@@ -346,15 +346,25 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rideStatus := RideStatus{
+		ID:     ulid.Make().String(),
+		RideID: rideID,
+		Status: "MATCHING",
+	}
 	if _, err := tx.ExecContext(
 		ctx,
 		`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
-		ulid.Make().String(), rideID, "MATCHING",
+		rideStatus.ID, rideID, rideStatus.Status,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	updateChairCh <- struct{}{}
+	ch, ok := updateChairCh[rideID]
+	if !ok {
+		ch = make(chan *RideStatus, 1)
+		updateChairCh[rideID] = ch
+	}
+	ch <- &rideStatus
 
 	var rideCount int
 	if err := tx.GetContext(ctx, &rideCount, `SELECT COUNT(*) FROM rides WHERE user_id = ? `, user.ID); err != nil {
@@ -563,15 +573,25 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = tx.ExecContext(
+	rideStatus := RideStatus{
+		ID:     ulid.Make().String(),
+		RideID: rideID,
+		Status: "COMPLETED",
+	}
+	if _, err := tx.ExecContext(
 		ctx,
 		`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
-		ulid.Make().String(), rideID, "COMPLETED")
-	if err != nil {
+		rideStatus.ID, rideID, rideStatus.Status,
+	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	updateChairCh <- struct{}{}
+	ch, ok := updateChairCh[rideID]
+	if !ok {
+		ch = make(chan *RideStatus, 1)
+		updateChairCh[rideID] = ch
+	}
+	ch <- &rideStatus
 
 	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE id = ?`, rideID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

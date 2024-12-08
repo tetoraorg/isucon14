@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -168,19 +169,47 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		}
 		if status != "COMPLETED" && status != "CANCELED" {
 			if req.Latitude == ride.PickupLatitude && req.Longitude == ride.PickupLongitude && status == "ENROUTE" {
-				if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "PICKUP"); err != nil {
+				rideStatus := RideStatus{
+					ID:     ulid.Make().String(),
+					RideID: ride.ID,
+					Status: "PICKUP",
+				}
+				if _, err := tx.ExecContext(
+					ctx,
+					`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
+					rideStatus.ID, rideStatus.RideID, rideStatus.Status,
+				); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
-				updateChairCh <- struct{}{}
+				ch, ok := updateChairCh[ride.ID]
+				if !ok {
+					ch = make(chan *RideStatus, 1)
+					updateChairCh[ride.ID] = ch
+				}
+				ch <- &rideStatus
 			}
 
 			if req.Latitude == ride.DestinationLatitude && req.Longitude == ride.DestinationLongitude && status == "CARRYING" {
-				if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "ARRIVED"); err != nil {
+				rideStatus := RideStatus{
+					ID:     ulid.Make().String(),
+					RideID: ride.ID,
+					Status: "ARRIVED",
+				}
+				if _, err := tx.ExecContext(
+					ctx,
+					`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
+					rideStatus.ID, rideStatus.RideID, rideStatus.Status,
+				); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
-				updateChairCh <- struct{}{}
+				ch, ok := updateChairCh[ride.ID]
+				if !ok {
+					ch = make(chan *RideStatus, 1)
+					updateChairCh[ride.ID] = ch
+				}
+				ch <- &rideStatus
 			}
 		}
 	}
@@ -213,17 +242,11 @@ type chairGetNotificationResponseData struct {
 	Status                string     `json:"status"`
 }
 
-var updateChairCh = make(chan struct{}, 1)
+var updateChairCh = make(map[string]chan *RideStatus)
 
 func chairGetNotification(w http.ResponseWriter, r *http.Request) {
-	for {
-		<-updateChairCh
-		chairSendNotification(w, r)
-	}
-}
-
-func chairSendNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	chair := ctx.Value("chair").(*Chair)
 
 	tx, err := database().Beginx()
 	if err != nil {
@@ -235,7 +258,6 @@ func chairSendNotification(w http.ResponseWriter, r *http.Request) {
 	yetSentRideStatus := RideStatus{}
 	status := ""
 
-	chair := ctx.Value("chair").(*Chair)
 	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
@@ -243,6 +265,13 @@ func chairSendNotification(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	user := &User{}
+	err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", ride.UserID)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -261,26 +290,42 @@ func chairSendNotification(w http.ResponseWriter, r *http.Request) {
 	} else {
 		status = yetSentRideStatus.Status
 	}
+	writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
+		Data: &chairGetNotificationResponseData{
+			RideID: ride.ID,
+			User: simpleUser{
+				ID:   user.ID,
+				Name: fmt.Sprintf("%s %s", user.Firstname, user.Lastname),
+			},
+			PickupCoordinate: Coordinate{
+				Latitude:  ride.PickupLatitude,
+				Longitude: ride.PickupLongitude,
+			},
+			DestinationCoordinate: Coordinate{
+				Latitude:  ride.DestinationLatitude,
+				Longitude: ride.DestinationLongitude,
+			},
+			Status: status,
+		},
+		RetryAfterMs: 30,
+	})
 
-	user := &User{}
-	err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", ride.UserID)
+	for {
+		rideStatus := <-updateChairCh[ride.ID]
+		chairSendNotification(w, r, tx, user, ride, rideStatus)
+	}
+}
+
+func chairSendNotification(w http.ResponseWriter, r *http.Request, tx *sqlx.Tx, user *User, ride *Ride, status *RideStatus) {
+	ctx := r.Context()
+
+	// if status.ID != "" {
+	_, err := tx.ExecContext(ctx, `UPDATE ride_statuses SET chair_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?`, status.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-
-	if yetSentRideStatus.ID != "" {
-		_, err := tx.ExecContext(ctx, `UPDATE ride_statuses SET chair_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?`, yetSentRideStatus.ID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
+	// }
 
 	_, _ = w.Write([]byte("data: "))
 	writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
@@ -298,7 +343,7 @@ func chairSendNotification(w http.ResponseWriter, r *http.Request) {
 				Latitude:  ride.DestinationLatitude,
 				Longitude: ride.DestinationLongitude,
 			},
-			Status: status,
+			Status: status.Status,
 		},
 		RetryAfterMs: 30,
 	})
@@ -345,11 +390,25 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 	switch req.Status {
 	// Acknowledge the ride
 	case "ENROUTE":
-		if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "ENROUTE"); err != nil {
+		rideStatus := RideStatus{
+			ID:     ulid.Make().String(),
+			RideID: ride.ID,
+			Status: "ENROUTE",
+		}
+		if _, err := tx.ExecContext(
+			ctx,
+			`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
+			rideStatus.ID, rideStatus.RideID, rideStatus.Status,
+		); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		updateChairCh <- struct{}{}
+		ch, ok := updateChairCh[ride.ID]
+		if !ok {
+			ch = make(chan *RideStatus, 1)
+			updateChairCh[ride.ID] = ch
+		}
+		ch <- &rideStatus
 	// After Picking up user
 	case "CARRYING":
 		status, err := getLatestRideStatus(ctx, tx, ride.ID)
@@ -361,11 +420,25 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, errors.New("chair has not arrived yet"))
 			return
 		}
-		if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "CARRYING"); err != nil {
+		rideStatus := RideStatus{
+			ID:     ulid.Make().String(),
+			RideID: ride.ID,
+			Status: "CARRYING",
+		}
+		if _, err := tx.ExecContext(
+			ctx,
+			`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
+			rideStatus.ID, rideStatus.RideID, rideStatus.Status,
+		); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		updateChairCh <- struct{}{}
+		ch, ok := updateChairCh[ride.ID]
+		if !ok {
+			ch = make(chan *RideStatus, 1)
+			updateChairCh[ride.ID] = ch
+		}
+		ch <- &rideStatus
 	default:
 		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
 	}
