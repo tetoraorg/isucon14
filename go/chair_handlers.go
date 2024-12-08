@@ -182,10 +182,10 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
-				ch, ok := updateRideStatusCh[ride.ID]
+				ch, ok := updateRideStatusCh[chair.ID]
 				if !ok {
 					ch = make(chan *RideRideStatus, 1)
-					updateRideStatusCh[ride.ID] = ch
+					updateRideStatusCh[chair.ID] = ch
 				}
 				ch <- &RideRideStatus{r: ride, s: &rideStatus}
 			}
@@ -204,10 +204,10 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
-				ch, ok := updateRideStatusCh[ride.ID]
+				ch, ok := updateRideStatusCh[chair.ID]
 				if !ok {
 					ch = make(chan *RideRideStatus, 1)
-					updateRideStatusCh[ride.ID] = ch
+					updateRideStatusCh[chair.ID] = ch
 				}
 				ch <- &RideRideStatus{r: ride, s: &rideStatus}
 			}
@@ -247,7 +247,7 @@ type RideRideStatus struct {
 	s *RideStatus
 }
 
-var updateRideStatusCh = make(map[string]chan *RideRideStatus) // rideID -> chan *RideRideStatus
+var updateRideStatusCh = make(map[string]chan *RideRideStatus) // chairID -> chan *RideRideStatus
 
 func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -315,8 +315,8 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			_ = tx.Commit()
 			return
-		case rrs := <-updateRideStatusCh[ride.ID]:
-			err := tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ?", ride.UserID)
+		case rrs := <-updateRideStatusCh[chair.ID]:
+			err := tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ?", rrs.r.UserID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
@@ -412,10 +412,10 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		ch, ok := updateRideStatusCh[ride.ID]
+		ch, ok := updateRideStatusCh[chair.ID]
 		if !ok {
 			ch = make(chan *RideRideStatus, 1)
-			updateRideStatusCh[ride.ID] = ch
+			updateRideStatusCh[chair.ID] = ch
 		}
 		ch <- &RideRideStatus{r: ride, s: &rideStatus}
 	// After Picking up user
@@ -442,10 +442,10 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		ch, ok := updateRideStatusCh[ride.ID]
+		ch, ok := updateRideStatusCh[chair.ID]
 		if !ok {
 			ch = make(chan *RideRideStatus, 1)
-			updateRideStatusCh[ride.ID] = ch
+			updateRideStatusCh[chair.ID] = ch
 		}
 		ch <- &RideRideStatus{r: ride, s: &rideStatus}
 	default:
