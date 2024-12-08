@@ -64,6 +64,7 @@ func internalGetMatching(ctx context.Context) {
 		rideStatusesByRideID[rideStatus.RideID] = append(rideStatusesByRideID[rideStatus.RideID], rideStatus)
 	}
 
+	slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))
 	for _, nullRide := range nullRides {
 		for _, chair := range chairs {
 			ridesInChair := make([]*Ride, 0, 100)
@@ -93,7 +94,6 @@ func internalGetMatching(ctx context.Context) {
 					slog.Error("Failed to update ride", err)
 					return
 				}
-				break
 			}
 		}
 	}
