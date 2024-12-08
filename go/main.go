@@ -159,6 +159,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	userByIDCache.Purge()
 	userByTokenCache.Purge()
 	userByInviteCache.Purge()
+	chairAccessTokenCache.Purge()
 
 	// pproteinにcollect requestを飛ばす
 	if os.Getenv("PROD") != "true" {
