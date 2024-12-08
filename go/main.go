@@ -62,7 +62,7 @@ var ownerByRegisterCache, _ = sc.New(func(ctx context.Context, register string) 
 
 var settingCache, _ = sc.New(func(ctx context.Context, name string) (string, error) {
 	var setting string
-	query := "SELECT * FROM settings WHERE name = ?"
+	query := "SELECT value FROM settings WHERE name = ?"
 	err := database().GetContext(ctx, &setting, query, name)
 	return setting, err
 }, 90*time.Second, 90*time.Second)
