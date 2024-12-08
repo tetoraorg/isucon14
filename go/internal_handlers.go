@@ -88,9 +88,9 @@ func internalGetMatching(ctx context.Context) {
 				}
 
 				latestStatus := statuses[0]
-				if latestStatus.Status != "COMPLETE" {
-					continue
-				}
+				// if latestStatus.Status != "COMPLETE" {
+				// 	continue
+				// }
 
 				if latestStatus.ChairSentAt != nil {
 					count++
