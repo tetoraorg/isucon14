@@ -21,6 +21,13 @@ import (
 
 var db *sqlx.DB
 
+func init() {
+	// TextHandler を使用してログを設定
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: slog.LevelDebug, // ログレベルをINFO以上に設定
+	})))
+}
+
 func main() {
 	mux := setup()
 
