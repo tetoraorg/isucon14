@@ -9,8 +9,15 @@ import (
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func internalGetMatching(ctx context.Context) {
+	tx, err := database().BeginTxx(ctx, nil)
+	if err != nil {
+		slog.Error("Failed to begin transaction", err)
+		return
+	}
+	defer tx.Rollback()
+
 	var chairs []*Chair
-	if err := database().SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE is_active = TRUE"); err != nil {
+	if err := tx.SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE is_active = TRUE"); err != nil {
 		slog.Error("Failed to fetch chairs", err)
 		return
 	}
@@ -24,7 +31,7 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	var nullRides []*Ride
-	if err := database().SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL"); err != nil {
+	if err := tx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL"); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
@@ -38,7 +45,7 @@ func internalGetMatching(ctx context.Context) {
 		slog.Error("Failed to parse rides in query", err)
 		return
 	}
-	if err := database().SelectContext(ctx, &rides, database().Rebind(query), params...); err != nil {
+	if err := tx.SelectContext(ctx, &rides, tx.Rebind(query), params...); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
@@ -55,7 +62,7 @@ func internalGetMatching(ctx context.Context) {
 			slog.Error("Failed to parse ride_statuses in query", err)
 			return
 		}
-		if err := database().SelectContext(ctx, &rideStatuses, database().Rebind(query), params...); err != nil {
+		if err := tx.SelectContext(ctx, &rideStatuses, tx.Rebind(query), params...); err != nil {
 			slog.Error("Failed to fetch ride_statuses", err)
 			return
 		}
@@ -101,10 +108,13 @@ func internalGetMatching(ctx context.Context) {
 
 			if count < 6 && allReady {
 				slog.Info("Matched ride", nullRide.ID, chair.ID)
-				if _, err := database().ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
+				if _, err := tx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
 					return
 				}
+
+				tx.Commit()
+				return
 			}
 		}
 	}
