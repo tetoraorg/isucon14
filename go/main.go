@@ -74,6 +74,13 @@ var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*Pay
 	return &paymentToken, err
 }, 90*time.Second, 90*time.Second)
 
+var chairLocationsCache, _ = sc.New(func(ctx context.Context, chairID string) (*ChairLocation, error) {
+	var chairLocation ChairLocation
+	query := `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`,
+	err := database().GetContext(ctx, &chairLocation, query, chairID)
+	return chairLocation, err
+}, 90*time.Second, 90*time.Second)
+
 func main() {
 	mux := setup()
 
@@ -193,6 +200,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 
 	settingCache.Purge()
 	paymentTokenCache.Purge()
+	chairLocationsCache.Purge()
 
 	userByIDCache.Purge()
 	userByTokenCache.Purge()
