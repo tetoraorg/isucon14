@@ -92,13 +92,13 @@ func chairAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-var chairAccessTokenCache, _ = sc.New(func(ctx context.Context, key string) (ChairOnlyNoChange, error) {
+var chairAccessTokenCache, _ = sc.New(func(ctx context.Context, key string) (*ChairOnlyNoChange, error) {
 	chair := Chair{}
 	err := database().GetContext(ctx, &chair, "SELECT * FROM chairs WHERE access_token = ?", key)
 	if err != nil {
-		return ChairOnlyNoChange{}, err
+		return &ChairOnlyNoChange{}, err
 	}
-	chairOnlyNoChange := ChairOnlyNoChange{
+	chairOnlyNoChange := &ChairOnlyNoChange{
 		ID:          chair.ID,
 		OwnerID:     chair.OwnerID,
 		Name:        chair.Name,
