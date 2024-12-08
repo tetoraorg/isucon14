@@ -74,6 +74,7 @@ func internalGetMatching(ctx context.Context) {
 				}
 			}
 			if ridesInChair < 6 {
+				slog.Info("Matched ride", nullRide.ID, chair.ID)
 				if _, err := database().ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
 					return
