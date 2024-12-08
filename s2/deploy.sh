@@ -2,12 +2,6 @@
 
 export PROD=$([[ "${1:-}" == "prod" ]] && echo true || echo false)
 
-# サーバー固有のdeploy.shがあれば実行
-if [[ -f $REPOSITORY_DIR/$SERVER_NAME/deploy.sh ]]; then
-  $REPOSITORY_DIR/$SERVER_NAME/deploy.sh $1
-  exit 0
-fi
-
 cd $REPOSITORY_DIR/go
 go mod download
 go build -o $APP_NAME
