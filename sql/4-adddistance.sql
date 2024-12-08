@@ -37,6 +37,3 @@ WHERE id NOT IN (
     )
   ) AS latest_records
 );
--- chair_idをuniqueにする
-ALTER TABLE chair_locations
-  ADD UNIQUE INDEX idx_chair_id (chair_id);
