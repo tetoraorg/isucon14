@@ -55,7 +55,7 @@ var ownerByTokenCache, _ = sc.New(func(ctx context.Context, token string) (*Owne
 
 var ownerByRegisterCache, _ = sc.New(func(ctx context.Context, register string) (*Owner, error) {
 	var owner Owner
-	query := "SELECT * FROM owners WHERE register_code = ?"
+	query := "SELECT * FROM owners WHERE chair_register_token = ?"
 	err := database().GetContext(ctx, &owner, query, register)
 	return &owner, err
 }, 90*time.Second, 90*time.Second)
