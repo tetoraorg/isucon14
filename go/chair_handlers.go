@@ -282,7 +282,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			tx, err := database().Beginx()
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
-				return
+				continue
 			}
 			defer tx.Rollback()
 
@@ -291,7 +291,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", rrs.r.UserID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
-				return
+				continue
 			}
 
 			ride := rrs.r
@@ -300,11 +300,11 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 				if err := tx.GetContext(ctx, &status, `SELECT * FROM ride_statuses WHERE ride_id = ? AND chair_sent_at IS NULL ORDER BY created_at ASC LIMIT 1`, ride.ID); err != nil {
 					if errors.Is(err, sql.ErrNoRows) {
 						if err := tx.GetContext(ctx, &status, `SELECT * FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, ride.ID); err != nil {
-							return
+							continue
 						}
 					} else {
 						writeError(w, http.StatusInternalServerError, err)
-						return
+						continue
 					}
 				}
 			}
