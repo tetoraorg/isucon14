@@ -260,9 +260,10 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
 				RetryAfterMs: 30,
 			})
+		} else {
+			writeError(w, http.StatusInternalServerError, err)
+			return
 		}
-		writeError(w, http.StatusInternalServerError, err)
-		return
 	}
 	ch, ok := updateRideStatusCh[chair.ID]
 	if !ok {
