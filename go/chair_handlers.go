@@ -56,7 +56,7 @@ func chairPostChairs(w http.ResponseWriter, r *http.Request) {
 	chairID := ulid.Make().String()
 	accessToken := secureRandomStr(32)
 
-	_, err := database().ExecContext(
+	_, err := ridesDatabase().ExecContext(
 		ctx,
 		"INSERT INTO chairs (id, owner_id, name, model, is_active, access_token) VALUES (?, ?, ?, ?, ?, ?)",
 		chairID, owner.ID, req.Name, req.Model, false, accessToken,
@@ -92,7 +92,7 @@ func chairPostActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := database().ExecContext(ctx, "UPDATE chairs SET is_active = ? WHERE id = ?", req.IsActive, chair.ID)
+	_, err := ridesDatabase().ExecContext(ctx, "UPDATE chairs SET is_active = ? WHERE id = ?", req.IsActive, chair.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -180,7 +180,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	if last_err == nil {
 		// 両方取得できたときのみ
 		distance = abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude)
-		if _, err := tx.ExecContext(ctx, `
+		if _, err := ridesTx.ExecContext(ctx, `
 		UPDATE chairs
 		SET total_distance = total_distance + ?, 
 		    total_distance_updated_at = ?

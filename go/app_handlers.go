@@ -257,7 +257,7 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		item.Chair = getAppRidesResponseItemChair{}
 
 		chair := &Chair{}
-		if err := tx.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
+		if err := ridesTx.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -804,7 +804,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 
 	if ride.ChairID.Valid {
 		chair := &Chair{}
-		if err := tx.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
+		if err := ridesTx.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -980,7 +980,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	defer ridesTx.Rollback()
 
 	chairs := []Chair{}
-	err = tx.SelectContext(
+	err = ridesTx.SelectContext(
 		ctx,
 		&chairs,
 		`SELECT * FROM chairs WHERE is_active = 1`,
