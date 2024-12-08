@@ -18,6 +18,16 @@ type Chair struct {
 	TotalDistanceUpdatedAt sql.NullTime `db:"total_distance_updated_at"`
 }
 
+type ChairOnlyNoChange struct {
+	ID          string    `db:"id"`
+	OwnerID     string    `db:"owner_id"`
+	Name        string    `db:"name"`
+	Model       string    `db:"model"`
+	AccessToken string    `db:"access_token"`
+	CreatedAt   time.Time `db:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at"`
+}
+
 type ChairModel struct {
 	Name  string `db:"name"`
 	Speed int    `db:"speed"`

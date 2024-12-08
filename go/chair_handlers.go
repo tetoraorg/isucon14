@@ -74,7 +74,7 @@ type postChairActivityRequest struct {
 
 func chairPostActivity(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	chair := ctx.Value("chair").(*Chair)
+	chair := ctx.Value("chairOnlyNoChange").(*ChairOnlyNoChange)
 
 	req := &postChairActivityRequest{}
 	if err := bindJSON(r, req); err != nil {
@@ -103,7 +103,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chair := ctx.Value("chair").(*Chair)
+	chair := ctx.Value("chairOnlyNoChange").(*ChairOnlyNoChange)
 
 	tx, err := database().Beginx()
 	if err != nil {
@@ -232,7 +232,7 @@ type chairGetNotificationResponseData struct {
 
 func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	chair := ctx.Value("chair").(*Chair)
+	chair := ctx.Value("chairOnlyNoChange").(*ChairOnlyNoChange)
 
 	tx, err := database().Beginx()
 	if err != nil {
@@ -319,7 +319,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	rideID := r.PathValue("ride_id")
 
-	chair := ctx.Value("chair").(*Chair)
+	chair := ctx.Value("chairOnlyNoChange").(*ChairOnlyNoChange)
 
 	req := &postChairRidesRideIDStatusRequest{}
 	if err := bindJSON(r, req); err != nil {
