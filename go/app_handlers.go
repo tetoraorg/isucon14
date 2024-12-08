@@ -941,10 +941,11 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	retrievedAt := time.Now()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
+	// これなに？
+	// if err != nil {
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
 
 	writeJSON(w, http.StatusOK, &appGetNearbyChairsResponse{
 		Chairs:      nearbyChairs,
