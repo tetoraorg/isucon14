@@ -34,7 +34,8 @@ CREATE TABLE chairs
   updated_at   DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新日時',
   PRIMARY KEY (id),
   INDEX idx_access_token (access_token),
-  INDEX idx_owner_id (owner_id)
+  INDEX idx_owner_id (owner_id),
+  INDEX idx_is_active (is_active)
 )
   COMMENT = '椅子情報テーブル';
 
