@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/bytedance/sonic/decoder"
 	"github.com/bytedance/sonic/encoder"
@@ -68,6 +69,17 @@ func setup() http.Handler {
 		panic(err)
 	}
 	db = _db
+
+	// 再起動試験対策
+	for {
+		err := db.Ping()
+		if err == nil {
+			break
+		}
+		slog.Error("DB not ready", err)
+		time.Sleep(time.Second * 2)
+	}
+	slog.Error("DB ready")
 
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)
