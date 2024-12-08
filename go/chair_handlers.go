@@ -260,6 +260,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
 				RetryAfterMs: 30,
 			})
+			return
 		} else {
 			writeError(w, http.StatusInternalServerError, err)
 			return
