@@ -87,7 +87,7 @@ func main() {
 		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 		defer ticker.Stop()
 
-		for {
+		for range ticker.C {
 			internalGetMatching(context.Background())
 		}
 	}()
