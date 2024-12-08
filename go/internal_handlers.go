@@ -2,10 +2,29 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
+	"math"
+	"sort"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
+
+type ChairWithLocation struct {
+	ID                     string       `db:"id"`
+	OwnerID                string       `db:"owner_id"`
+	Name                   string       `db:"name"`
+	Model                  string       `db:"model"`
+	IsActive               bool         `db:"is_active"`
+	AccessToken            string       `db:"access_token"`
+	CreatedAt              time.Time    `db:"created_at"`
+	UpdatedAt              time.Time    `db:"updated_at"`
+	TotalDistance          int          `db:"total_distance"`
+	TotalDistanceUpdatedAt sql.NullTime `db:"total_distance_updated_at"`
+	Latitude               int          `db:"latitude"`
+	Longitude              int          `db:"longitude"`
+}
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func internalGetMatching(ctx context.Context) {
@@ -16,8 +35,8 @@ func internalGetMatching(ctx context.Context) {
 	}
 	defer tx.Rollback()
 
-	var chairs []*Chair
-	if err := tx.SelectContext(ctx, &chairs, "SELECT * FROM chairs WHERE is_active = TRUE"); err != nil {
+	var chairs []*ChairWithLocation
+	if err := tx.SelectContext(ctx, &chairs, "SELECT c.*, cl.latitude AS latitude, cl.longitude AS longitude FROM chairs c INNER JOIN chair_locations cl ON c.id = cl.chair_id WHERE c.is_active = TRUE"); err != nil {
 		slog.Error("Failed to fetch chairs", err)
 		return
 	}
@@ -75,6 +94,16 @@ func internalGetMatching(ctx context.Context) {
 
 	slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))
 	for _, nullRide := range nullRides {
+		sort.Slice(chairs, func(i, j int) bool {
+			return math.Abs(
+				float64(chairs[i].Latitude-nullRide.PickupLatitude)+
+					float64(chairs[i].Longitude-nullRide.PickupLongitude),
+			) < math.Abs(
+				float64(chairs[j].Latitude-nullRide.PickupLatitude)+
+					float64(chairs[j].Longitude-nullRide.PickupLongitude),
+			)
+		})
+
 		for _, chair := range chairs {
 			ridesInChair := make([]*Ride, 0, 100)
 			for _, ride := range rides {
