@@ -263,57 +263,6 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
-	ride := &Ride{}
-	user := &User{}
-
-	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			slog.Info("no ride found")
-			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
-				RetryAfterMs: 30,
-			})
-			return
-		}
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	yetSentRideStatus := RideStatus{}
-	status := ""
-	if err := tx.GetContext(ctx, &yetSentRideStatus, `SELECT * FROM ride_statuses WHERE ride_id = ? AND chair_sent_at IS NULL ORDER BY created_at ASC LIMIT 1`, ride.ID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			status, err = getLatestRideStatus(ctx, tx, ride.ID)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, err)
-				return
-			}
-		} else {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-	} else {
-		status = yetSentRideStatus.Status
-	}
-
-	writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
-		Data: &chairGetNotificationResponseData{
-			RideID: ride.ID,
-			User: simpleUser{
-				ID:   user.ID,
-				Name: fmt.Sprintf("%s %s", user.Firstname, user.Lastname),
-			},
-			PickupCoordinate: Coordinate{
-				Latitude:  ride.PickupLatitude,
-				Longitude: ride.PickupLongitude,
-			},
-			DestinationCoordinate: Coordinate{
-				Latitude:  ride.DestinationLatitude,
-				Longitude: ride.DestinationLongitude,
-			},
-			Status: status,
-		},
-		RetryAfterMs: 30,
-	})
 
 	for {
 		slog.Info("waiting for updateRideStatusCh", "chair.ID", chair.ID)
@@ -324,12 +273,29 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			return
 		case rrs := <-updateRideStatusCh[chair.ID]:
 			slog.Info("chairGetNotification", "rrs", rrs)
+			user := &User{}
 			err := tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ?", rrs.r.UserID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
 			}
-			chairSendNotification(w, r, tx, user, rrs.r, rrs.s)
+
+			ride := rrs.r
+			status := rrs.s
+			if status == nil {
+				if err := tx.GetContext(ctx, &status, `SELECT * FROM ride_statuses WHERE ride_id = ? AND chair_sent_at IS NULL ORDER BY created_at ASC LIMIT 1`, ride.ID); err != nil {
+					if errors.Is(err, sql.ErrNoRows) {
+						if err := tx.GetContext(ctx, &status, `SELECT * FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, ride.ID); err != nil {
+							return
+						}
+					} else {
+						writeError(w, http.StatusInternalServerError, err)
+						return
+					}
+				}
+			}
+
+			chairSendNotification(w, r, tx, user, rrs.r, status)
 		}
 	}
 }

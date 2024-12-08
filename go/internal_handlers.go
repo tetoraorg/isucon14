@@ -45,5 +45,11 @@ func internalGetMatching(ctx context.Context) {
 		slog.Error("Failed to update ride", err)
 		return
 	}
+	ch, ok := updateRideStatusCh[matched.ID]
+	if !ok {
+		ch = make(chan *RideRideStatus, 1)
+		updateRideStatusCh[matched.ID] = ch
+	}
+	ch <- &RideRideStatus{r: ride, s: nil}
 
 }
