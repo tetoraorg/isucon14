@@ -142,8 +142,6 @@ func internalGetMatching(ctx context.Context) {
 					slog.Error("Failed to update ride", err)
 					return
 				}
-			} else {
-				slog.Info("Not matched ride", "chair_id", chair.ID, "ride_id", nullRide.ID)
 			}
 		}
 	}
