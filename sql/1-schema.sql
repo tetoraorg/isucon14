@@ -32,7 +32,9 @@ CREATE TABLE chairs
   access_token VARCHAR(255) NOT NULL COMMENT 'アクセストークン',
   created_at   DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '登録日時',
   updated_at   DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新日時',
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  INDEX idx_access_token (access_token),
+  INDEX idx_owner_id (owner_id)
 )
   COMMENT = '椅子情報テーブル';
 
@@ -44,7 +46,8 @@ CREATE TABLE chair_locations
   latitude   INTEGER     NOT NULL COMMENT '経度',
   longitude  INTEGER     NOT NULL COMMENT '緯度',
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '登録日時',
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  INDEX idx_chair_id (chair_id)
 )
   COMMENT = '椅子の現在位置情報テーブル';
 
@@ -103,7 +106,8 @@ CREATE TABLE ride_statuses
   created_at      DATETIME(6)                                                                NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '状態変更日時',
   app_sent_at     DATETIME(6)                                                                NULL COMMENT 'ユーザーへの状態通知日時',
   chair_sent_at   DATETIME(6)                                                                NULL COMMENT '椅子への状態通知日時',
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  INDEX idx_ride_id (ride_id)
 )
   COMMENT = 'ライドステータスの変更履歴テーブル';
 
