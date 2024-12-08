@@ -51,7 +51,7 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	var rideStatuses []*RideStatus
-	query, params, err = sqlx.In("SELECT * FROM ride_statuses WHERE ride_id IN (?)", rideIDs)
+	query, params, err = sqlx.In("SELECT * FROM ride_statuses WHERE ride_id IN (?) ORDER BY created_desc DESC", rideIDs)
 	if err != nil {
 		slog.Error("Failed to parse ride_statuses in query", err)
 		return
@@ -61,15 +61,35 @@ func internalGetMatching(ctx context.Context) {
 		return
 	}
 
+	rideStatusesByRideID := make(map[string][]*RideStatus)
+	for _, rideStatus := range rideStatuses {
+		rideStatusesByRideID[rideStatus.RideID] = append(rideStatusesByRideID[rideStatus.RideID], rideStatus)
+	}
+
 	for _, nullRide := range nullRides {
 		for _, chair := range chairs {
-			ridesInChair := 0
+			ridesInChair := make([]*Ride, 0, 100)
 			for _, ride := range rides {
 				if ride.ChairID.String == chair.ID {
-					ridesInChair++
+					ridesInChair = append(ridesInChair, ride)
 				}
 			}
-			if ridesInChair < 6 {
+
+			count := 0
+			for _, ride := range ridesInChair {
+				statuses, ok := rideStatusesByRideID[ride.ID]
+				if !ok {
+					continue
+				}
+
+				for _, status := range statuses {
+					if status.ChairSentAt != nil {
+						count++
+					}
+				}
+			}
+
+			if count < 6 {
 				slog.Info("Matched ride", nullRide.ID, chair.ID)
 				if _, err := database().ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
