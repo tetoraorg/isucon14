@@ -1,8 +1,9 @@
 package main
 
 import (
-	"bytes"
+	"context"
 	crand "crypto/rand"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -12,8 +13,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bytedance/sonic/decoder"
-	"github.com/bytedance/sonic/encoder"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-sql-driver/mysql"
@@ -62,7 +61,6 @@ func setup() http.Handler {
 	dbConfig.Net = "tcp"
 	dbConfig.DBName = dbname
 	dbConfig.ParseTime = true
-	dbConfig.InterpolateParams = true
 
 	_db, err := sqlx.Connect("mysql", dbConfig.FormatDSN())
 	if err != nil {
@@ -121,9 +119,24 @@ func setup() http.Handler {
 	}
 
 	// internal handlers
-	{
-		mux.HandleFunc("GET /api/internal/matching", internalGetMatching)
-	}
+	// {
+	// 	mux.HandleFunc("GET /api/internal/matching", internalGetMatching)
+	// }
+	go func() {
+
+		interval := 500// milli seconds
+		if vStr, exists := os.LookupEnv("ISUCON_MATCHING_INTERVAL"); exists {
+			if val, err := strconv.Atoi(vStr); err == nil {
+				interval = val
+			}
+		}
+
+		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			internalGetMatching(context.Background())
+		}
+	}()
 
 	// pproteinのエンドポイント設定
 	if os.Getenv("PROD") != "true" {
@@ -179,33 +192,30 @@ type Coordinate struct {
 }
 
 func bindJSON(r *http.Request, v interface{}) error {
-	return decoder.NewStreamDecoder(r.Body).Decode(v)
+	return json.NewDecoder(r.Body).Decode(v)
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
-
-	buf := new(bytes.Buffer)
-	err := encoder.NewStreamEncoder(buf).Encode(v)
+	buf, err := json.Marshal(v)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(statusCode)
-	w.Write(buf.Bytes())
+	w.Write(buf)
 }
 
 func writeError(w http.ResponseWriter, statusCode int, err error) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	w.WriteHeader(statusCode)
-	buf := new(bytes.Buffer)
-	marshalError := encoder.NewStreamEncoder(buf).Encode(map[string]string{"message": err.Error()})
+	buf, marshalError := json.Marshal(map[string]string{"message": err.Error()})
 	if marshalError != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"error":"marshaling error failed"}`))
 		return
 	}
-	w.Write(buf.Bytes())
+	w.Write(buf)
 
 	slog.Error("error response wrote", err)
 }
