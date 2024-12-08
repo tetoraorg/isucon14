@@ -67,6 +67,13 @@ var settingCache, _ = sc.New(func(ctx context.Context, name string) (string, err
 	return setting, err
 }, 90*time.Second, 90*time.Second)
 
+var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*PaymentToken, error) {
+	var paymentToken PaymentToken
+	query := "SELECT * FROM payment_tokens WHERE user_id = ?"
+	err := database().GetContext(ctx, &paymentToken, query, userID)
+	return &paymentToken, err
+}, 90*time.Second, 90*time.Second)
+
 func main() {
 	mux := setup()
 
