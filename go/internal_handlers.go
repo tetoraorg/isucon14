@@ -97,7 +97,7 @@ func internalGetMatching(ctx context.Context) {
 		slog.Info("Oldest ride", "id", nullRides[0].ID, "created_at", nullRides[0].CreatedAt, "duration", time.Since(nullRides[0].CreatedAt))
 	}
 
-	upsertIDs := make([]any, 0, len(nullRides))
+	upsertIDs := make([]string, 0, len(nullRides))
 	for _, nullRide := range nullRides {
 		sort.Slice(chairs, func(i, j int) bool {
 			return calculateDistance(chairs[i].Latitude, chairs[i].Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude) <
