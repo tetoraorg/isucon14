@@ -172,6 +172,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
+				updateChairCh <- struct{}{}
 			}
 
 			if req.Latitude == ride.DestinationLatitude && req.Longitude == ride.DestinationLongitude && status == "CARRYING" {
@@ -179,6 +180,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
+				updateChairCh <- struct{}{}
 			}
 		}
 	}
@@ -211,9 +213,17 @@ type chairGetNotificationResponseData struct {
 	Status                string     `json:"status"`
 }
 
+var updateChairCh = make(chan struct{}, 1)
+
 func chairGetNotification(w http.ResponseWriter, r *http.Request) {
+	for {
+		<-updateChairCh
+		chairSendNotification(w, r)
+	}
+}
+
+func chairSendNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	chair := ctx.Value("chair").(*Chair)
 
 	tx, err := database().Beginx()
 	if err != nil {
@@ -225,6 +235,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	yetSentRideStatus := RideStatus{}
 	status := ""
 
+	chair := ctx.Value("chair").(*Chair)
 	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
@@ -271,7 +282,8 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
+	_, _ = w.Write([]byte("data: "))
+	writeJSONForSSE(w, http.StatusOK, &chairGetNotificationResponse{
 		Data: &chairGetNotificationResponseData{
 			RideID: ride.ID,
 			User: simpleUser{
@@ -337,6 +349,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+		updateChairCh <- struct{}{}
 	// After Picking up user
 	case "CARRYING":
 		status, err := getLatestRideStatus(ctx, tx, ride.ID)
@@ -352,6 +365,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+		updateChairCh <- struct{}{}
 	default:
 		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
 	}

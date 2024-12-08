@@ -166,6 +166,20 @@ func writeJSON(w http.ResponseWriter, statusCode int, v interface{}) {
 	w.Write(buf)
 }
 
+func writeJSONForSSE(w http.ResponseWriter, statusCode int, v interface{}) {
+	w.Header().Set("Content-Type", "text/event-stream")
+
+	buf := new(bytes.Buffer)
+	err := encoder.NewStreamEncoder(buf).Encode(v)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(statusCode)
+	w.Write(buf.Bytes())
+	w.Write([]byte("\n"))
+}
+
 func writeError(w http.ResponseWriter, statusCode int, err error) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	w.WriteHeader(statusCode)
