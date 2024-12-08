@@ -78,7 +78,7 @@ var chairLocationsCache, _ = sc.New(func(ctx context.Context, chairID string) (*
 	var chairLocation ChairLocation
 	query := `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`
 	err := database().GetContext(ctx, &chairLocation, query, chairID)
-	return chairLocation, err
+	return &chairLocation, err
 }, 90*time.Second, 90*time.Second)
 
 func main() {

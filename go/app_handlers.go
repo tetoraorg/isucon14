@@ -969,7 +969,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		// 	chair.ID,
 		// )
 
-		chairLocation, err := chairLocationByChairIDCache.Get(ctx, chair.ID)
+		chairLocation, err := chairLocationsCache.Get(ctx, chair.ID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
