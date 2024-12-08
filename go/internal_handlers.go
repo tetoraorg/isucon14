@@ -25,13 +25,13 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	var nullRides []*Ride
-	if err := database().SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE status = \"COMPLETED\""); err != nil {
+	if err := database().SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL"); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
 
 	var rides []*Ride
-	query, params, err := sqlx.In("SELECT * FROM rides WHERE chair_id IN (?) AND status <> \"COMPLETED\"", chairIDs)
+	query, params, err := sqlx.In("SELECT * FROM rides WHERE chair_id IN (?)", chairIDs)
 	if err != nil {
 		slog.Error("Failed to parse rides in query", err)
 		return
@@ -70,7 +70,7 @@ func internalGetMatching(ctx context.Context) {
 				}
 			}
 			if ridesInChair < 6 {
-				slog.Info("Matched ride", "ride", nullRide.ID, "chair", chair.ID)
+				slog.Info("Matched ride", nullRide.ID, chair.ID)
 				if _, err := database().ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
 					return
