@@ -26,7 +26,7 @@ type ChairWithLocation struct {
 }
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
-func internalGetMatching(ctx context.Context, ride *Ride) {
+func internalGetMatching(ctx context.Context) {
 	ridesTx, err := ridesDatabase().BeginTxx(ctx, nil)
 	if err != nil {
 		slog.Error("Failed to begin transaction", err)
@@ -48,15 +48,13 @@ func internalGetMatching(ctx context.Context, ride *Ride) {
 		chairIDs = append(chairIDs, chair.ID)
 	}
 
-	var nullRides []*Ride = []*Ride{ride}
-	if ride == nil {
-		if err := ridesTx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at ASC FOR UPDATE"); err != nil {
-			slog.Error("Failed to fetch rides", err)
-			return
-		}
-		if len(nullRides) == 0 {
-			return
-		}
+	var nullRides []*Ride
+	if err := ridesTx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at ASC FOR UPDATE"); err != nil {
+		slog.Error("Failed to fetch rides", err)
+		return
+	}
+	if len(nullRides) == 0 {
+		return
 	}
 
 	var rides []*Ride
