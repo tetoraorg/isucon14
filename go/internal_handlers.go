@@ -43,6 +43,16 @@ func internalGetMatching(ctx context.Context) {
 		return
 	}
 
+	var chairModels []*ChairModel
+	if err := ridesTx.SelectContext(ctx, &chairModels, "SELECT * FROM chair_models"); err != nil {
+		slog.Error("Failed to fetch chair_models", err)
+		return
+	}
+	speedMap := make(map[string]int, len(chairModels))
+	for _, chairModel := range chairModels {
+		speedMap[chairModel.Name] = chairModel.Speed
+	}
+
 	chairIDs := make([]string, 0, len(chairs))
 	for _, chair := range chairs {
 		chairIDs = append(chairIDs, chair.ID)
@@ -100,8 +110,11 @@ func internalGetMatching(ctx context.Context) {
 	}
 	for _, nullRide := range nullRides {
 		sort.Slice(chairs, func(i, j int) bool {
-			return calculateDistance(chairs[i].Latitude, chairs[i].Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude) <
-				calculateDistance(chairs[j].Latitude, chairs[j].Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude)
+			ci, cj := chairs[i], chairs[j]
+			si, sj := speedMap[ci.Name], speedMap[cj.Name]
+			pi, pj := calculateDistance(ci.Latitude, ci.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude), calculateDistance(cj.Latitude, cj.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude)
+			di, dj := calculateDistance(ci.Latitude, ci.Longitude, nullRide.DestinationLatitude, nullRide.DestinationLongitude), calculateDistance(cj.Latitude, cj.Longitude, nullRide.DestinationLatitude, nullRide.DestinationLongitude)
+			return (pi+di)/si < (pj+dj)/sj
 		})
 
 		for _, chair := range chairs {
