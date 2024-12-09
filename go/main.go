@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kaz/pprotein/integration"
 	"github.com/motoki317/sc"
 )
@@ -123,7 +122,6 @@ func main() {
 }
 
 func setup() http.Handler {
-
 	initDatabase()
 
 	// 再起動試験対策
@@ -146,10 +144,6 @@ func setup() http.Handler {
 	slog.Info("DB ready")
 
 	mux := chi.NewRouter()
-	if os.Getenv("PROD") != "true" {
-		mux.Use(middleware.Logger)
-		mux.Use(middleware.Recoverer)
-	}
 	mux.HandleFunc("POST /api/initialize", postInitialize)
 
 	// app handlers
