@@ -49,7 +49,7 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	var nullRides []*Ride
-	if err := ridesTx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at ASC"); err != nil {
+	if err := ridesTx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at ASC FOR UPDATE"); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
@@ -92,8 +92,10 @@ func internalGetMatching(ctx context.Context) {
 		rideStatusesByRideID[rideStatus.RideID] = append(rideStatusesByRideID[rideStatus.RideID], rideStatus)
 	}
 
+	occupiedChairsMap := make(map[string]struct{}, len(chairs))
+
+	slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))	
 	if len(nullRides) > 0 {
-		slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))
 		slog.Info("Oldest ride", "id", nullRides[0].ID, "created_at", nullRides[0].CreatedAt, "duration", time.Since(nullRides[0].CreatedAt))
 	}
 	for i, nullRide := range nullRides {
@@ -103,10 +105,14 @@ func internalGetMatching(ctx context.Context) {
 		})
 
 		for _, chair := range chairs {
+			if _, ok := occupiedChairsMap[chair.ID]; ok {
+				continue
+			}
+
 			dis := calculateDistance(chair.Latitude, chair.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude)
-			// if dis > 1000 {
-			// 	break
-			// }
+			if dis > 1000 {
+			 	break
+			}
 
 			ridesInChair := make([]*Ride, 0, 100)
 			for _, ride := range rides {
@@ -123,7 +129,7 @@ func internalGetMatching(ctx context.Context) {
 					continue
 				}
 
-				if len(statuses) == 0 {
+				if len(statuses) < 6 {
 					continue
 				}
 
@@ -139,12 +145,13 @@ func internalGetMatching(ctx context.Context) {
 			}
 
 			if allReady {
-				slog.Info("Matched", "chair_id", chair.ID, "ride_id", nullRide.ID, "count", count, "i", i, "dis", dis)
+				slog.Info("Matched", "chair_id", chair.ID, "ride_id", nullRide.ID, "count", count, "nullRide.ChairID", nullRide.ChairID, "i", i, "dis", dis)
 				if _, err := ridesTx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
 					return
 				}
-				break
+				occupiedChairsMap[chair.ID] = struct{}{}
+				break // 他のchairは受け付けない
 			}
 		}
 	}
