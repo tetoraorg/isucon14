@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kaz/pprotein/integration"
 	"github.com/motoki317/sc"
 )
@@ -88,7 +87,7 @@ func init() {
 		slog.New(
 			slog.NewTextHandler(
 				os.Stdout,
-				&slog.HandlerOptions{Level: slog.LevelDebug},
+				&slog.HandlerOptions{Level: slog.LevelError},
 			),
 		),
 	)
@@ -106,6 +105,10 @@ func main() {
 				interval = val
 			}
 		}
+		if interval == 0 {
+			return
+		}
+
 		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 		defer ticker.Stop()
 
@@ -119,7 +122,6 @@ func main() {
 }
 
 func setup() http.Handler {
-
 	initDatabase()
 
 	// 再起動試験対策
@@ -142,8 +144,6 @@ func setup() http.Handler {
 	slog.Info("DB ready")
 
 	mux := chi.NewRouter()
-	mux.Use(middleware.Logger)
-	mux.Use(middleware.Recoverer)
 	mux.HandleFunc("POST /api/initialize", postInitialize)
 
 	// app handlers
@@ -258,7 +258,7 @@ func writeJSON(w http.ResponseWriter, statusCode int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	buf, err := json.Marshal(v)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 	w.WriteHeader(statusCode)

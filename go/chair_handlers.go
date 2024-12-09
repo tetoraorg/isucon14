@@ -131,7 +131,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 
 	// 最後の椅子の位置を取得
 	var lastLocation ChairLocation
-	last_err := tx.GetContext(ctx, &lastLocation, `
+	last_err := ridesTx.GetContext(ctx, &lastLocation, `
 		SELECT *
 		FROM chair_locations
 		WHERE chair_id = ?
@@ -151,7 +151,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	new_created_at := time.Now()
-	if _, err := tx.ExecContext(
+	if _, err := ridesTx.ExecContext(
 		ctx,
 		`INSERT INTO chair_locations (id, chair_id, latitude, longitude, created_at)
 			VALUES (?, ?, ?, ?, ?)
@@ -165,6 +165,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
 	location := &ChairLocation{
 		ID:        lastLocation.ID,
 		ChairID:   chair.ID,
@@ -173,8 +174,6 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: new_created_at,
 	}
 
-	chairLocationsCache.Store(chair.ID, location)
-
 	// 距離の更新をするように
 	var distance int
 	if last_err == nil {
@@ -182,7 +181,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		distance = abs(location.Latitude-lastLocation.Latitude) + abs(location.Longitude-lastLocation.Longitude)
 		if _, err := ridesTx.ExecContext(ctx, `
 		UPDATE chairs
-		SET total_distance = total_distance + ?, 
+		SET total_distance = total_distance + ?,
 		    total_distance_updated_at = ?
 		WHERE id = ?
 	`, distance, location.CreatedAt, chair.ID); err != nil {
@@ -257,13 +256,6 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	chair := ctx.Value("chairOnlyNoChange").(*ChairOnlyNoChange)
 
-	tx, err := database().Beginx()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer tx.Rollback()
-
 	ridesTx, err := ridesDatabase().Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -278,7 +270,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	if err := ridesTx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
-				RetryAfterMs: 30,
+				RetryAfterMs: 1000,
 			})
 			return
 		}
@@ -322,11 +314,6 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
 	if err := ridesTx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -349,7 +336,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			},
 			Status: status,
 		},
-		RetryAfterMs: 30,
+		RetryAfterMs: 100,
 	})
 }
 

@@ -752,7 +752,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 	if err := ridesTx.GetContext(ctx, ride, `SELECT * FROM rides WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`, user.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &appGetNotificationResponse{
-				RetryAfterMs: 30,
+				RetryAfterMs: 3000,
 			})
 			return
 		}
@@ -799,7 +799,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: ride.CreatedAt.UnixMilli(),
 			UpdateAt:  ride.UpdatedAt.UnixMilli(),
 		},
-		RetryAfterMs: 30,
+		RetryAfterMs: 200,
 	}
 
 	if ride.ChairID.Valid {
@@ -859,11 +859,11 @@ func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNoti
 	err := tx.SelectContext(
 		ctx,
 		&rideWithStatuses,
-		`SELECT 
-			r.id AS ride_id, 
-			r.chair_id, 
-			r.evaluation, 
-			rs.status, 
+		`SELECT
+			r.id AS ride_id,
+			r.chair_id,
+			r.evaluation,
+			rs.status,
 			rs.created_at
 		FROM rides r
 		INNER JOIN ride_statuses rs ON r.id = rs.ride_id
@@ -965,13 +965,6 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 
 	coordinate := Coordinate{Latitude: lat, Longitude: lon}
 
-	tx, err := database().Beginx()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer tx.Rollback()
-
 	ridesTx, err := ridesDatabase().Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -1020,38 +1013,20 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// 最新の位置情報を取得
-		// chairLocation := &ChairLocation{}
-		// err = tx.GetContext(
-		// 	ctx,
-		// 	chairLocation,
-		// 	`SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`,
-		// 	chair.ID,
-		// )
-
-		// chairLocation, err := chairLocationsCache.Get(ctx, chair.ID)
-		// if err != nil {
-		// 	if errors.Is(err, sql.ErrNoRows) {
-		// 		continue
-		// 	}
-		// 	writeError(w, http.StatusInternalServerError, err)
-		// 	return
-		// }
-
-		_chairLocation, ok := chairLocationsCache.Load(chair.ID)
-		if !ok {
-			var chairLocation ChairLocation
-			query := `SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`
-			err := database().GetContext(ctx, &chairLocation, query, chair.ID)
-			if err != nil {
-				if errors.Is(err, sql.ErrNoRows) {
-					continue
-				}
-				writeError(w, http.StatusInternalServerError, err)
-				return
+		chairLocation := &ChairLocation{}
+		err = ridesTx.GetContext(
+			ctx,
+			chairLocation,
+			`SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`,
+			chair.ID,
+		)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
 			}
+			writeError(w, http.StatusInternalServerError, err)
+			return
 		}
-
-		chairLocation := _chairLocation.(*ChairLocation)
 
 		if calculateDistance(coordinate.Latitude, coordinate.Longitude, chairLocation.Latitude, chairLocation.Longitude) <= distance {
 			nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
