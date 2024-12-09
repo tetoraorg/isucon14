@@ -84,6 +84,10 @@ func main() {
 				interval = val
 			}
 		}
+		if interval == 0 {
+			return
+		}
+
 		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 		defer ticker.Stop()
 
