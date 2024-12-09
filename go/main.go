@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -74,6 +75,27 @@ var paymentTokenCache, _ = sc.New(func(ctx context.Context, userID string) (*Pay
 	return &paymentToken, err
 }, 90*time.Second, 90*time.Second)
 
+// var latestRideStatusCache, _ = sc.New(func(ctx context.Context, rideID string) (string, error) {
+// 	status := ""
+// 	if err := ridesDatabase().GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
+// 		return "", err
+// 	}
+
+//		return status, nil
+//	}, 90*time.Second, 90*time.Second)
+func init() {
+	slog.SetDefault(
+		slog.New(
+			slog.NewTextHandler(
+				os.Stdout,
+				&slog.HandlerOptions{Level: slog.LevelDebug},
+			),
+		),
+	)
+}
+
+var chairLocationsCache = sync.Map{}
+
 func main() {
 	mux := setup()
 
@@ -107,10 +129,18 @@ func setup() http.Handler {
 	// 再起動試験対策
 	for {
 		err := database().Ping()
-		if err == nil {
+		err2 := ridesDatabase().Ping()
+		if err == nil && err2 == nil {
 			break
 		}
-		slog.Error("DB not ready", err)
+
+		if err != nil {
+			slog.Error("DB not ready", err)
+		}
+
+		if err2 != nil {
+			slog.Error("Rides DB not ready", err2)
+		}
 		time.Sleep(time.Second * 2)
 	}
 	slog.Info("DB ready")

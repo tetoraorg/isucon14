@@ -27,7 +27,7 @@ type ChairWithLocation struct {
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func internalGetMatching(ctx context.Context) {
-	tx, err := database().BeginTxx(ctx, nil)
+	tx, err := ridesDatabase().BeginTxx(ctx, nil)
 	if err != nil {
 		slog.Error("Failed to begin transaction", err)
 		return

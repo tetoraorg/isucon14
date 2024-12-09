@@ -53,7 +53,7 @@ func initDatabase() (err error) {
 		if err != nil {
 			panic(err)
 		}
-		maxConnsInt := 25
+		maxConnsInt := 50
 		dbs[i].SetMaxOpenConns(maxConnsInt)
 		dbs[i].SetMaxIdleConns(maxConnsInt * 2)
 		dbs[i].SetConnMaxLifetime(3 * time.Minute)
@@ -65,6 +65,6 @@ func database() *sqlx.DB {
 	return dbs[0]
 }
 
-// func chairDatabase() *sqlx.DB {
-// 	return dbs[1]
-// }
+func ridesDatabase() *sqlx.DB {
+	return dbs[1]
+}
