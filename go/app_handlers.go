@@ -385,6 +385,14 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	updateRideCh <- &Ride{
+		ID:                   rideID,
+		UserID:               user.ID,
+		PickupLatitude:       req.PickupCoordinate.Latitude,
+		PickupLongitude:      req.PickupCoordinate.Longitude,
+		DestinationLatitude:  req.DestinationCoordinate.Latitude,
+		DestinationLongitude: req.DestinationCoordinate.Longitude,
+	}
 
 	if _, err := ridesTx.ExecContext(
 		ctx,

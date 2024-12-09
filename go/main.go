@@ -95,6 +95,7 @@ func init() {
 }
 
 var chairLocationsCache = sync.Map{}
+var updateRideCh = make(chan *Ride, 1)
 
 func main() {
 	mux := setup()
@@ -113,8 +114,13 @@ func main() {
 		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			internalGetMatching(context.Background())
+		for {
+			select {
+			case <-ticker.C:
+				internalGetMatching(context.Background(), nil)
+			case ride := <-updateRideCh:
+				internalGetMatching(context.Background(), ride)
+			}
 		}
 	}()
 
