@@ -256,13 +256,6 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	chair := ctx.Value("chairOnlyNoChange").(*ChairOnlyNoChange)
 
-	tx, err := database().Beginx()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer tx.Rollback()
-
 	ridesTx, err := ridesDatabase().Beginx()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -277,7 +270,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	if err := ridesTx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
-				RetryAfterMs: 30,
+				RetryAfterMs: 1000,
 			})
 			return
 		}
@@ -319,11 +312,6 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
 	}
 
 	if err := ridesTx.Commit(); err != nil {
