@@ -121,31 +121,34 @@ func internalGetMatching(ctx context.Context) {
 				}
 			}
 
-			count := 0
 			allReady := true
 			for _, ride := range ridesInChair {
-				statuses, ok := rideStatusesByRideID[ride.ID]
-				if !ok {
-					continue
-				}
-
-				if len(statuses) < 6 {
-					continue
-				}
-
-				latestStatus := statuses[0]
-				if latestStatus.Status != "COMPLETED" {
+				if ride.ID == nullRide.ID {
 					allReady = false
 					break
 				}
 
-				if latestStatus.ChairSentAt != nil {
-					count++
+				statuses, ok := rideStatusesByRideID[ride.ID]
+				if !ok {
+					allReady = false
+					break
+				}
+
+				if len(statuses) != 6 {
+					allReady = false
+					break
+				}
+
+				for _, status := range statuses {
+					if status.ChairSentAt == nil {
+						allReady = false
+						break
+					}
 				}
 			}
 
 			if allReady {
-				slog.Info("Matched", "chair_id", chair.ID, "ride_id", nullRide.ID, "count", count, "nullRide.ChairID", nullRide.ChairID, "i", i, "dis", dis)
+				slog.Info("Matched", "chair_id", chair.ID, "ride_id", nullRide.ChairID, "i", i, "dis", dis)
 				if _, err := ridesTx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
 					return
