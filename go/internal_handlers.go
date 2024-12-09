@@ -111,7 +111,14 @@ func internalGetMatching(ctx context.Context) {
 	for _, nullRide := range nullRides {
 		sort.Slice(chairs, func(i, j int) bool {
 			ci, cj := chairs[i], chairs[j]
-			si, sj := speedMap[ci.Name], speedMap[cj.Name]
+			si, ok := speedMap[ci.Model]
+			if !ok {
+				si = 1
+			}
+			sj, ok := speedMap[cj.Model]
+			if !ok {
+				sj = 1
+			}
 			pi, pj := calculateDistance(ci.Latitude, ci.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude), calculateDistance(cj.Latitude, cj.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude)
 			di, dj := calculateDistance(ci.Latitude, ci.Longitude, nullRide.DestinationLatitude, nullRide.DestinationLongitude), calculateDistance(cj.Latitude, cj.Longitude, nullRide.DestinationLatitude, nullRide.DestinationLongitude)
 			return (pi+di)/si < (pj+dj)/sj
