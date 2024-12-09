@@ -113,11 +113,11 @@ func internalGetMatching(ctx context.Context) {
 			ci, cj := chairs[i], chairs[j]
 			si, ok := speedMap[ci.Model]
 			if !ok {
-				si = 1
+				si = 10
 			}
 			sj, ok := speedMap[cj.Model]
 			if !ok {
-				sj = 1
+				sj = 10
 			}
 			pi, pj := calculateDistance(ci.Latitude, ci.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude), calculateDistance(cj.Latitude, cj.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude)
 			di, dj := calculateDistance(ci.Latitude, ci.Longitude, nullRide.DestinationLatitude, nullRide.DestinationLongitude), calculateDistance(cj.Latitude, cj.Longitude, nullRide.DestinationLatitude, nullRide.DestinationLongitude)
