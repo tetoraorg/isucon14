@@ -94,7 +94,7 @@ func internalGetMatching(ctx context.Context) {
 
 	occupiedChairsMap := make(map[string]struct{}, len(chairs))
 
-	slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))	
+	slog.Info("Matching rides", "len(chairs)", len(chairs), "len(nullRides)", len(nullRides), "len(rides)", len(rides))
 	if len(nullRides) > 0 {
 		slog.Info("Oldest ride", "id", nullRides[0].ID, "created_at", nullRides[0].CreatedAt, "duration", time.Since(nullRides[0].CreatedAt))
 	}
@@ -111,7 +111,7 @@ func internalGetMatching(ctx context.Context) {
 
 			dis := calculateDistance(chair.Latitude, chair.Longitude, nullRide.PickupLatitude, nullRide.PickupLongitude)
 			if dis > 1000 {
-			 	break
+				break
 			}
 
 			ridesInChair := make([]*Ride, 0, 100)
@@ -156,5 +156,8 @@ func internalGetMatching(ctx context.Context) {
 		}
 	}
 
-	_ = ridesTx.Commit()
+	slog.Info("Matching rides done. Committing transaction")
+	if err := ridesTx.Commit(); err != nil {
+		slog.Error("Failed to commit transaction", err)
+	}
 }
