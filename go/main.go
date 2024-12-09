@@ -148,8 +148,8 @@ func setup() http.Handler {
 	mux := chi.NewRouter()
 	if os.Getenv("PROD") != "true" {
 		mux.Use(middleware.Logger)
+		mux.Use(middleware.Recoverer)
 	}
-	mux.Use(middleware.Recoverer)
 	mux.HandleFunc("POST /api/initialize", postInitialize)
 
 	// app handlers
