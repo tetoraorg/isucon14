@@ -262,7 +262,7 @@ func writeJSON(w http.ResponseWriter, statusCode int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	buf, err := json.Marshal(v)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 	w.WriteHeader(statusCode)
