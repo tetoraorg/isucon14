@@ -1021,7 +1021,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 
 		// 最新の位置情報を取得
 		chairLocation := &ChairLocation{}
-		err = tx.GetContext(
+		err = ridesTx.GetContext(
 			ctx,
 			chairLocation,
 			`SELECT * FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1`,

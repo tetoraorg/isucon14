@@ -131,7 +131,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 
 	// 最後の椅子の位置を取得
 	var lastLocation ChairLocation
-	last_err := tx.GetContext(ctx, &lastLocation, `
+	last_err := ridesTx.GetContext(ctx, &lastLocation, `
 		SELECT *
 		FROM chair_locations
 		WHERE chair_id = ?
@@ -151,7 +151,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	new_created_at := time.Now()
-	if _, err := tx.ExecContext(
+	if _, err := ridesTx.ExecContext(
 		ctx,
 		`INSERT INTO chair_locations (id, chair_id, latitude, longitude, created_at)
 			VALUES (?, ?, ?, ?, ?)

@@ -27,15 +27,15 @@ type ChairWithLocation struct {
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func internalGetMatching(ctx context.Context) {
-	tx, err := ridesDatabase().BeginTxx(ctx, nil)
+	ridesTx, err := ridesDatabase().BeginTxx(ctx, nil)
 	if err != nil {
 		slog.Error("Failed to begin transaction", err)
 		return
 	}
-	defer tx.Rollback()
+	defer ridesTx.Rollback()
 
 	var chairs []*ChairWithLocation
-	if err := tx.SelectContext(ctx, &chairs, "SELECT c.*, cl.latitude AS latitude, cl.longitude AS longitude FROM chairs c INNER JOIN chair_locations cl ON c.id = cl.chair_id WHERE c.is_active = TRUE"); err != nil {
+	if err := ridesTx.SelectContext(ctx, &chairs, "SELECT c.*, cl.latitude AS latitude, cl.longitude AS longitude FROM chairs c INNER JOIN chair_locations cl ON c.id = cl.chair_id WHERE c.is_active = TRUE"); err != nil {
 		slog.Error("Failed to fetch chairs", err)
 		return
 	}
@@ -49,7 +49,7 @@ func internalGetMatching(ctx context.Context) {
 	}
 
 	var nullRides []*Ride
-	if err := tx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at ASC"); err != nil {
+	if err := ridesTx.SelectContext(ctx, &nullRides, "SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at ASC"); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
@@ -63,7 +63,7 @@ func internalGetMatching(ctx context.Context) {
 		slog.Error("Failed to parse rides in query", err)
 		return
 	}
-	if err := tx.SelectContext(ctx, &rides, tx.Rebind(query), params...); err != nil {
+	if err := ridesTx.SelectContext(ctx, &rides, ridesTx.Rebind(query), params...); err != nil {
 		slog.Error("Failed to fetch rides", err)
 		return
 	}
@@ -81,7 +81,7 @@ func internalGetMatching(ctx context.Context) {
 			slog.Error("Failed to parse ride_statuses in query", err)
 			return
 		}
-		if err := tx.SelectContext(ctx, &rideStatuses, tx.Rebind(query), params...); err != nil {
+		if err := ridesTx.SelectContext(ctx, &rideStatuses, ridesTx.Rebind(query), params...); err != nil {
 			slog.Error("Failed to fetch ride_statuses", err)
 			return
 		}
@@ -140,7 +140,7 @@ func internalGetMatching(ctx context.Context) {
 
 			if allReady {
 				slog.Info("Matched", "chair_id", chair.ID, "ride_id", nullRide.ID, "count", count, "i", i, "dis", dis)
-				if _, err := tx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
+				if _, err := ridesTx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", chair.ID, nullRide.ID); err != nil {
 					slog.Error("Failed to update ride", err)
 					return
 				}
@@ -149,5 +149,5 @@ func internalGetMatching(ctx context.Context) {
 		}
 	}
 
-	_ = tx.Commit()
+	_ = ridesTx.Commit()
 }
